@@ -1,14 +1,36 @@
-# ROTK v2.4.6 Online — first port milestone
+# Three Kingdoms Classic v2.4.6 — Shared-State Multiplayer Experiment
 
-Run `npm start` (Node 18+). Deploy these files to the same Render Web Service (replace previous files in GitHub).
+This is the ORIGINAL classic v2.4.6 HTML UI, not the circular-map prototype.
 
-- `/` — online multiplayer duel using the **v2.4.6 15-city names, map coordinates and road adjacency**, plus initial named officers and officer-stat modifiers to combat.
-- `/classic` — **unaltered original v2.4.6** playable in browser as offline single-player. This route does NOT synchronize its game state with the multiplayer server.
-- `/api/state?code=CAOCAO&side=shu` — online state.
-- `/api/action?code=CAOCAO&side=shu&type=recruit&city=4` — GET action (city IDs now use original v2.4.6 map).
-- `/api/end-turn?code=CAOCAO&side=shu` — GET end turn.
+## Deploy
+Upload `index.html`, `server.js`, `package.json` to the root of your GitHub `rotk` repository. Render Node Web Service start command: `npm start`.
 
-IMPORTANT: This is a **partial port**, not yet full multiplayer parity. Online combat still uses a simplified resolution formula with officer modifiers, not the full v2.4.6 multi-round battle simulator; no live officer hiring, hero skills, transfer of officer rosters, advanced reports, sound integration, or original isometric city artwork. Offline `/classic` contains those original systems.
+## Join
+- Wei: `https://rotk.onrender.com/?room=CAOCAO&side=wei&mode=60`
+- Shu: `https://rotk.onrender.com/?room=CAOCAO&side=shu&mode=60`
+- Modes: 20, 60, 180, 300 (first visitor selects).
 
-All online rooms are held in RAM, resets on Render restart. No auth. GET action can execute on visit. Existing room state from the old deployment will be lost on restart.
-# rotk2
+## What is implemented
+- Original classic v2.4.6 game UI, map, economy, heroes, skill/battle functions remain in browser.
+- Both sides use the same shared snapshot in server RAM.
+- On action redraw, snapshot POST `/api/save`; GET `/api/state` polling every ~850 ms.
+- Optimistic version check to avoid silently overwriting newer snapshots; conflicts reload latest server state.
+- Faction-based controls: Wei 0 and Shu 1; Wu remains uncontrolled (AI actions disabled).
+- Turn end requires both factions, or deadline expiry. Shu browser processes classic turn-upkeep once, using CAS `/api/turn-applied`.
+- `/api/state?code=CAOCAO` returns snapshot, metadata, version, and phase.
+
+## Limitations / important
+- EXPERIMENTAL, not fully authoritative: browser calculates outcomes; server stores state and checks version only.
+- No anti-cheat or authentication, no hidden information (entire snapshot accessible), no per-action audit log, no GET action command bridge.
+- Snapshot writes can conflict if both players click at nearly the same time; loser reloads newer state, and its action may be lost. This is not real simultaneous action processing.
+- Both players must be online; Shu browser must be present to apply turn upkeep.
+- Server RAM is volatile; Render restarts wipe rooms. Choose a new room code when testing a new deployment.
+- Browser timer and state sync need testing on Render with two devices.
+- Original battle engine runs on the client, including randomness, so results are authoritative only by convention.
+- UI retains original single-player language in some labels.
+- Do not use for competitive play without server-side action execution and atomic persistence.
+
+## Smoke tests run
+- Node JS syntax checks passed for server and extracted browser script.
+- API tests: join, save, second client read, both End Turn, one-time turn-applied passed.
+- Browser interaction was not end-to-end tested.
