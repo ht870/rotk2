@@ -1,25 +1,38 @@
-# ROTK Classic v2.4.6 multiplayer — Lobby + GET action bridge (experimental)
-Deploy files in this zip at repository root, Render start `npm start`.
+# ROTK Classic — Full GET Actions + Classic Combat (experimental)
 
-Lobby button at top-right: Stop Game, Start New Game, select 20/60/180/300 seconds.
-Room endpoints:
-GET /api/rooms
-GET /api/state?code=CAOCAO
-GET /api/stop?code=CAOCAO
-GET /api/restart?code=CAOCAO&mode=300
-GET /api/action?code=CAOCAO&side=shu&type=fort&city=5
-GET /api/action?code=CAOCAO&side=shu&type=train&city=6
-GET /api/action?code=CAOCAO&side=shu&type=move&from=5&to=6
-GET /api/end-turn?code=CAOCAO&side=shu
+Deploy the entire directory contents at the repository root, then restart the Node server (`npm start`). Existing in-memory rooms will reset on redeploy; the patch does not itself call `/api/restart` or reset any room.
 
-IMPORTANT: GET action bridge currently implements only fort, train and move. The original classic recruitment, combat, hiring, and search depend on browser-side mechanics and are NOT implemented on GET API. GET action train/fort use simplified officer bonuses; move simplifies cohort composition. This is not yet mechanically identical to classic actions. Browser controls retain original mechanics.
+## GET API
 
-Limitations: rooms stored only in RAM, anyone with URL can stop/restart, browser is still the engine for economy/upkeep and combat, browser Shu must be online to process upkeep, simultaneous snapshot collisions can lose actions. GET mutates state and refreshing a URL can repeat an action if city is not marked used, so do not use automatic link prefetching.
-Tests: JS syntax checks and server join/save/fort/stop/restart smoke tests passed. Not yet tested on Render or a Mac browser.
+All UI action types are now exposed: `farm`, `food`, `recruit`, `fort`, `train`, `intel`, `move`, `search`, `hire`, `station`, and `attack`. Existing `GET /api/turn` batch syntax continues working for basic actions.
 
-## Atomic one-click batch GET (new)
-GET /api/turn?code=CAOCAO300&side=shu&version=7&actions=fort:5,train:6,move:7:6&end=1
+Simple example:
 
-`version` MUST equal current /api/state version. The batch applies in order to a cloned state, and if any action fails, nothing is committed. `end=1` ends Shu's turn in the same transaction. A successful request increments version once, not once per action. Duplicate clicks will be rejected because the version changes / side has ended.
+`/api/turn?code=CAOCAO301&side=shu&version=53&actions=farm:4,recruit:5,food:6&end=1`
 
-Action grammar: `fort:city`, `train:city`, `move:from:to`. At most 15 actions. Each city can only act once per turn. Currently only these three simplified actions are supported, not recruit, attack, search or hire. Original classic engine has NOT been ported to server. Room admin GET endpoints have no auth; do not expose publicly for serious use.
+Advanced actions use the `batch` query parameter containing a **URL-encoded JSON array**. This allows selecting 1–3 heroes, troop percentage, gold and food amounts, and transferring multiple officers:
+
+```json
+[
+  {"type":"station","city":5,"to":4,"heroes":["Liu Bei"]},
+  {"type":"attack","city":4,"to":0,"percent":70,"gold":100,"food":1000,"heroes":["Zhang Fei"]}
+]
+```
+
+Use `encodeURIComponent(JSON.stringify(actions))` to create `batch`. Full URL structure:
+
+`/api/turn?code=ROOM&side=shu&version=NN&batch=URL_ENCODED_JSON&end=1`
+
+Single action:
+
+`/api/action?code=ROOM&side=shu&version=NN&type=attack&city=4&to=0&percent=70&gold=100&food=1000&heroes=Zhang%20Fei`
+
+`station` transfers officers between adjacent friendly cities, is free, does not use the city's turn action, and applies the original two-turn cooldown. `attack` validates adjacency, selected officers, deployment percentage, and expedition food and gold, then executes the classic client's combat formulas, S/A hero passives, round-3 ultimates, casualties, retreats, captures, and battle inbox. The response includes `state.lastBattle` and `state.battleInbox`. `farm` is the UI's Commerce/Trade action.
+
+Batch processing is atomic on validation errors (`rolledBack:true`), version locked, and returns updated server state. Random search, persuasion, and battle outcomes can change if a failed batch is retried; avoid combining risky random actions with actions likely to fail.
+
+## Testing and limitations
+
+Run `node test_api.js` for integration tests of attack, station, rollback, locking, and economy. Syntax checks and these local integration tests passed; **Render deployment and full browser-versus-API equivalence tests have not been performed**. The original combat algorithm is copied from the bundled browser client into `battle_engine.js`; this is not yet one shared runtime function between browser and server. Server turn economy is still provisional and may differ from the original browser economy. Server data is in RAM; redeploy resets rooms. GET state mutation has no authentication; use only in trusted game rooms. The existing browser `/api/save` snapshot flow can race with GET actions; version locking prevents stale overwrites but requires refresh.
+
+**Do not redeploy during a valuable game without a durable room-state backup.**
