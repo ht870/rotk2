@@ -1,36 +1,25 @@
-# Three Kingdoms Classic v2.4.6 — Shared-State Multiplayer Experiment
+# ROTK Classic v2.4.6 multiplayer — Lobby + GET action bridge (experimental)
+Deploy files in this zip at repository root, Render start `npm start`.
 
-This is the ORIGINAL classic v2.4.6 HTML UI, not the circular-map prototype.
+Lobby button at top-right: Stop Game, Start New Game, select 20/60/180/300 seconds.
+Room endpoints:
+GET /api/rooms
+GET /api/state?code=CAOCAO
+GET /api/stop?code=CAOCAO
+GET /api/restart?code=CAOCAO&mode=300
+GET /api/action?code=CAOCAO&side=shu&type=fort&city=5
+GET /api/action?code=CAOCAO&side=shu&type=train&city=6
+GET /api/action?code=CAOCAO&side=shu&type=move&from=5&to=6
+GET /api/end-turn?code=CAOCAO&side=shu
 
-## Deploy
-Upload `index.html`, `server.js`, `package.json` to the root of your GitHub `rotk` repository. Render Node Web Service start command: `npm start`.
+IMPORTANT: GET action bridge currently implements only fort, train and move. The original classic recruitment, combat, hiring, and search depend on browser-side mechanics and are NOT implemented on GET API. GET action train/fort use simplified officer bonuses; move simplifies cohort composition. This is not yet mechanically identical to classic actions. Browser controls retain original mechanics.
 
-## Join
-- Wei: `https://rotk.onrender.com/?room=CAOCAO&side=wei&mode=60`
-- Shu: `https://rotk.onrender.com/?room=CAOCAO&side=shu&mode=60`
-- Modes: 20, 60, 180, 300 (first visitor selects).
+Limitations: rooms stored only in RAM, anyone with URL can stop/restart, browser is still the engine for economy/upkeep and combat, browser Shu must be online to process upkeep, simultaneous snapshot collisions can lose actions. GET mutates state and refreshing a URL can repeat an action if city is not marked used, so do not use automatic link prefetching.
+Tests: JS syntax checks and server join/save/fort/stop/restart smoke tests passed. Not yet tested on Render or a Mac browser.
 
-## What is implemented
-- Original classic v2.4.6 game UI, map, economy, heroes, skill/battle functions remain in browser.
-- Both sides use the same shared snapshot in server RAM.
-- On action redraw, snapshot POST `/api/save`; GET `/api/state` polling every ~850 ms.
-- Optimistic version check to avoid silently overwriting newer snapshots; conflicts reload latest server state.
-- Faction-based controls: Wei 0 and Shu 1; Wu remains uncontrolled (AI actions disabled).
-- Turn end requires both factions, or deadline expiry. Shu browser processes classic turn-upkeep once, using CAS `/api/turn-applied`.
-- `/api/state?code=CAOCAO` returns snapshot, metadata, version, and phase.
+## Atomic one-click batch GET (new)
+GET /api/turn?code=CAOCAO300&side=shu&version=7&actions=fort:5,train:6,move:7:6&end=1
 
-## Limitations / important
-- EXPERIMENTAL, not fully authoritative: browser calculates outcomes; server stores state and checks version only.
-- No anti-cheat or authentication, no hidden information (entire snapshot accessible), no per-action audit log, no GET action command bridge.
-- Snapshot writes can conflict if both players click at nearly the same time; loser reloads newer state, and its action may be lost. This is not real simultaneous action processing.
-- Both players must be online; Shu browser must be present to apply turn upkeep.
-- Server RAM is volatile; Render restarts wipe rooms. Choose a new room code when testing a new deployment.
-- Browser timer and state sync need testing on Render with two devices.
-- Original battle engine runs on the client, including randomness, so results are authoritative only by convention.
-- UI retains original single-player language in some labels.
-- Do not use for competitive play without server-side action execution and atomic persistence.
+`version` MUST equal current /api/state version. The batch applies in order to a cloned state, and if any action fails, nothing is committed. `end=1` ends Shu's turn in the same transaction. A successful request increments version once, not once per action. Duplicate clicks will be rejected because the version changes / side has ended.
 
-## Smoke tests run
-- Node JS syntax checks passed for server and extracted browser script.
-- API tests: join, save, second client read, both End Turn, one-time turn-applied passed.
-- Browser interaction was not end-to-end tested.
+Action grammar: `fort:city`, `train:city`, `move:from:to`. At most 15 actions. Each city can only act once per turn. Currently only these three simplified actions are supported, not recruit, attack, search or hire. Original classic engine has NOT been ported to server. Room admin GET endpoints have no auth; do not expose publicly for serious use.

@@ -377,7 +377,7 @@ function signed(n){return (n>0?'+':'')+number(n)}
 function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,heroes,defending,safety),rawHP=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].hp,0),rawATK=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].atk,0),rawDEF=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].def,0),fx=heroEffects(heroes,1,defending?'defender':'attacker',st.n,enemyN);
  let passives=[];for(const n of heroes){for(const sk of PASSIVE_SKILLS[n]||[]){let active=!['momentum','sustain'].includes(sk.type)&&(!['outnumbered','precision'].includes(sk.type)||st.n<enemyN)&&(sk.type!=='counter'||defending);if(active)passives.push({hero:n,tier:tier(n),name:sk.name,desc:sk.desc});}}
  return {n:st.n,rawHP,rawATK,rawDEF,hp:rawHP,atk:st.atk*fx.dmg,def:st.def*fx.guard,effectiveDEF:st.def*fx.guard,baseDEF:rawDEF/Math.max(1,st.n),warPct:st.totals[1]/300*100,ldrPct:st.totals[0]/300*100,fortPct:defending?safety/100:0,critPct:st.crit*100,healPct:st.heal*100,passiveAtkPct:(fx.dmg-1)*100,passiveGuardPct:(1-fx.guard)*100,passives};}
-function reportHTML(z){let playerWon=z.attackerOwner===1?z.won:z.oldOwner===1?!z.won:z.won;
+function reportHTML(z){let playerWon=z.attackerOwner===playerOwner?z.won:z.oldOwner===playerOwner?!z.won:false;
  let side=(name,initial,casualties,rec,city,delta,dev)=>`<div class="report-side"><div class="report-head"><b>${name}</b><span>Troops ${number(initial)}</span></div><div class="report-metrics"><span class="lost">Casualties ${number(casualties)}</span><span class="lost">Permanent Lost ${number(rec.lost)}</span></div><div class="report-city"><b>${city}</b><div class="report-metrics"><span class="${delta.troops>=0?'rec':'lost'}">Troops ${signed(delta.troops)}</span><span class="${delta.pool>=0?'rec':'lost'}">Pool ${signed(delta.pool)}</span>${dev?`<span class="lost">Dev −${(z.brutality*100).toFixed(1)}%</span>`:''}</div></div></div>`;
 
  let setupSide=(name,v)=>{
@@ -402,11 +402,11 @@ function reportHTML(z){let playerWon=z.attackerOwner===1?z.won:z.oldOwner===1?!z
  </div>`;
 };
  let rounds=z.battleLog.map(q=>`<div class="round-v242"><div class="round-head">ROUND ${q.r} · Remaining ${number(q.remainA)} vs ${number(q.remainD)}</div><div class="round-side">⚔ Attacker · ${number(q.atk)} damage · ${number(q.lossD)} casualties</div>${(q.eventsA||[]).filter(e=>!z.setup?.atk?.passives.some(p=>q.r===1&&e.includes(p.name))).map(e=>`<div class="skill-event ${e.includes('Ultimate')?'ultimate':''}">${colorSkillEvent(e)}</div>`).join('')}<div class="round-side">🛡 Defender · ${number(q.def)} damage · ${number(q.lossA)} casualties</div>${(q.eventsD||[]).filter(e=>!z.setup?.def?.passives.some(p=>q.r===1&&e.includes(p.name))).map(e=>`<div class="skill-event">${colorSkillEvent(e)}</div>`).join('')}${q.events.filter(e=>e.includes('critical')).map(e=>`<div class="skill-event">${e}</div>`).join('')}</div>`).join('');
- let lootPlayer=(z.won?z.attackerOwner===1:z.oldOwner===1);let lootSign=lootPlayer?'+':'−';
+ let lootPlayer=(z.won?z.attackerOwner===playerOwner:z.oldOwner===playerOwner);let lootSign=lootPlayer?'+':'−';
  return `<div class="report-two">${side('⚔ ATTACKER',z.originalAtk,z.originalAtk-z.survivorsA,z.aRec,'🏠 '+z.originName,z.originDelta,false)}${side('🛡 DEFENDER',z.originalDef,z.originalDef-z.survivorsD,z.dRec,'🏯 '+z.targetName,z.targetDelta,true)}</div><div class="report-loot"><b>WAR LOOT · ${lootPlayer?'Player gained':'Player lost'}</b><span class="${lootPlayer?'rec':'lost'}">🪙 ${lootSign}${number(z.lootGold)} · 🌾 ${lootSign}${number(z.lootFood)}</span><span>${z.battleLog.length} rounds · 🌾 consumed ${number(z.foodSpent||0)}</span></div><details class="setup-details" open><summary>INITIAL SETUP · RAW STATS / COMBAT BONUSES / ACTIVE PASSIVES</summary><div class="report-two">${setupSide('⚔ ATTACKER',z.setup.atk)}${setupSide('🛡 DEFENDER',z.setup.def)}</div></details><details class="round-details" open><summary>Battle Chronicle · ${z.battleLog.length} rounds</summary>${rounds}</details>`;
 }
 function colorSkillEvent(e){let n=e.replace(/^[^\w]*/, '').split(' — ')[0];let t=tier(n);return `<span style="color:${t==='S'?'#D4AF37':t==='A'?'#A855F7':'#cbd5e1'}">${e}</span>`}
-function playerWonBattle(z){return z.attackerOwner===1?z.won:z.oldOwner===1?!z.won:z.won}
+function playerWonBattle(z){return z.attackerOwner===playerOwner?z.won:z.oldOwner===playerOwner?!z.won:false}
 function displayBattle(z){let win=playerWonBattle(z);let title=win?(z.won?'🏆 CITY CAPTURED':'🛡 ATTACK REPELLED'):(z.won?'💀 CITY LOST':'⚔ ATTACK FAILED');battleDialog(title,[['',reportHTML(z)]],[['Close',()=>{},true]]);let box=document.getElementById('battleBox');box.classList.add('war-report');box.classList.toggle('player-won',win);box.classList.toggle('player-lost',!win)}
 function battleReport(){if(lastBattle)displayBattle(lastBattle)}
 function refreshInbox(){let n=battleInbox.filter(x=>x.unread).length;document.getElementById('inboxUnread').textContent=n?'● '+n:''}
@@ -511,7 +511,7 @@ function aiMove(owner){
  aiHire(owner);
 }
 
-function check(){let owners=new Set(cities.map(c=>c.owner));if(owners.size===1){over=true;log(owners.has(1)?'🏆 VICTORY! Shu menyatukan Tiongkok!':'💀 GAME OVER! Shu telah jatuh.')}else if(!owners.has(1)){over=true;log('💀 GAME OVER! Shu telah jatuh.')}}
+function check(){let owners=new Set(cities.map(c=>c.owner));if(owners.size===1){over=true;log(owners.has(playerOwner)?'🏆 VICTORY! '+['Wei','Shu','Wu'][playerOwner]+' menyatukan Tiongkok!':'💀 GAME OVER! '+['Wei','Shu','Wu'][playerOwner]+' telah jatuh.')}else if(!owners.has(0)||!owners.has(1)){over=true;log('🏁 Salah satu pemain telah kehilangan semua kota.')}}
 function end(){if(over)return;sfx('turn');mode='';check();if(!over){turn++;searchCount={};wander();for(const c of cities){normalize(c);c.used=false;
  c.manpower=(c.manpower||0)+stat(c,0);c.pool+=c.manpower*.04;c.safety+=stat(c,1);c.commerce+=stat(c,2);c.harvest+=stat(c,3);c.training+=(stat(c,0)+stat(c,1))/2;
  c.gold+=Math.max(1,Math.floor(c.commerce*.005));c.food=Math.max(0,c.food+Math.max(1,Math.floor(c.harvest*.01))-Math.ceil(c.troops*.08));
@@ -562,7 +562,7 @@ for(const c of [...cities].sort((a,b)=>a.y-b.y))art+=fortress(c);
 art+=`<rect width="760" height="490" filter="url(#papergrain)" pointer-events="none" opacity=".32"/>`;
 svg.innerHTML=art;
 svg.querySelectorAll('[data-city]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();clickCity(+el.dataset.city)}));
-let c=cities[selected];$('citytitle').textContent=c.name+' · '+['Wei','Shu','Wu'][c.owner];$('turn').textContent='Turn '+turn;$('status').textContent=over?'GAME FINISHED':'Shu '+cities.filter(c=>c.owner===playerOwner).length+'/15 cities';$('info').innerHTML=cityDashboard(c);
+let c=cities[selected];$('citytitle').textContent=c.name+' · '+['Wei','Shu','Wu'][c.owner];$('turn').textContent='Turn '+turn;$('status').textContent=over?'GAME FINISHED':['Wei','Shu','Wu'][playerOwner]+' '+cities.filter(c=>c.owner===playerOwner).length+'/15 cities';$('info').innerHTML=cityDashboard(c);
 for(const id of ['farm','recruit','fort','attack','move','food','train','intel'])$(id).disabled=over||c.owner!==playerOwner||c.used; $('station').disabled=over||c.owner!==playerOwner||!officers(c).length; $('hire').disabled=over||c.owner!==playerOwner; if($('marketpanel').style.display!=='none')showMarket();
 if(!mode)$('hint').textContent='City stats memakai diminishing returns per ranking stat (100%, 90.9%, dst). Search 3× per kota per turn, tidak memakai action kota. Officer tertangkap dapat dibujuk.'}
 $('info').addEventListener('click',e=>{let b=e.target.closest('[data-dashaction]');if(b&&!b.disabled)action(b.dataset.dashaction)});
@@ -594,6 +594,8 @@ async function req(url,body){const r=await fetch(url,{method:'POST',headers:{'Co
 const endpoint='/api/state?code='+encodeURIComponent(roomCode);
 function banner(s){let el=document.getElementById('onlineStatus');if(el)el.textContent=s}
 async function netRefresh(){if(netBusy||netApplying)return;try{const j=await (await fetch(endpoint,{cache:'no-store'})).json();if(!j.ok)return;
+ if(j.stopped){banner('ROOM STOPPED · Open Lobby to restart');return}
+ if(!j.state){netVersion=j.version;init();netLast='';await netCommit();return}
  netDeadline=j.deadline;netTurnPending=j.pendingTurn;netPhase=j.phase;
  if(j.version!==netVersion){netVersion=j.version;if(j.state)applySnapshot(j.state)}
  banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · phase '+netPhase+' · '+Math.max(0,Math.ceil((netDeadline-Date.now())/1000))+'s'+(netTurnPending?' · advancing turn':''));
@@ -610,6 +612,13 @@ async function netCommit(){if(netBusy||netApplying||netTurnPending)return;let sn
 const classicDraw=draw;
 draw=function(){classicDraw();if(netReady&&!netApplying&&!netBusy){clearTimeout(netQueued);netQueued=setTimeout(netCommit,180)}};
 async function multiplayerEnd(){await netCommit();try{await req('/api/end?code='+roomCode,{side:playerSide});banner('End Turn submitted')}catch(e){banner(e.message)}}
+const lobby=document.createElement('div');lobby.id='multiplayerLobby';lobby.style.cssText='position:fixed;right:10px;top:36px;z-index:9998;background:#172a39;color:#f8e6b9;border:1px solid #9c8556;padding:10px;border-radius:8px;font:13px system-ui;max-width:280px;display:none';
+lobby.innerHTML='<b>⚔ Multiplayer Lobby</b><div id="lobbyInfo" style="margin:8px 0"></div><label>Turn <select id="lobbyMode"><option value="20">20 seconds</option><option value="60">60 seconds</option><option value="180">3 minutes</option><option value="300" selected>5 minutes</option></select></label><div style="display:flex;gap:6px;margin-top:9px"><button id="lobbyStop">Stop Game</button><button id="lobbyRestart">Start New</button></div><p style="font-size:11px">Stop and restart affect everyone in this room. No undo.</p>';
+document.body.appendChild(lobby);
+const lobbyButton=document.createElement('button');lobbyButton.textContent='☷ Lobby';lobbyButton.style.cssText='position:fixed;right:10px;top:5px;z-index:9999;background:#243a4a;color:#fff;border:1px solid #9c8556;border-radius:5px;padding:4px 9px;cursor:pointer';document.body.appendChild(lobbyButton);
+lobbyButton.onclick=()=>{lobby.style.display=lobby.style.display==='none'?'block':'none';document.getElementById('lobbyInfo').textContent='Room '+roomCode+' · '+playerSide.toUpperCase()+' · phase '+netPhase};
+document.getElementById('lobbyStop').onclick=async()=>{if(!confirm('Stop game '+roomCode+' untuk semua pemain?'))return;const j=await fetch('/api/stop?code='+encodeURIComponent(roomCode));banner((await j.json()).ok?'ROOM STOPPED':'Stop failed')};
+document.getElementById('lobbyRestart').onclick=async()=>{if(!confirm('Start NEW game? Current progress will be erased for all players.'))return;const mode=document.getElementById('lobbyMode').value;const j=await (await fetch('/api/restart?code='+encodeURIComponent(roomCode)+'&mode='+mode)).json();if(j.ok){netVersion=j.version;netPhase=1;netDeadline=j.deadline;netLast='';init();await netCommit();lobby.style.display='none';banner('New game · '+mode+' seconds')}else banner(j.error||'Restart failed')};
 const bar=document.createElement('div');bar.id='onlineStatus';bar.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;background:#142536;color:#ffe2a3;padding:4px 12px;border:1px solid #b99554;border-radius:0 0 9px 9px;font:12px system-ui';bar.textContent='Connecting multiplayer...';document.body.appendChild(bar);
 init();closeCity();
 (async()=>{try{const j=await req('/api/join?code='+roomCode,{mode:Number(qs.get('mode'))||60,side:playerSide});netVersion=j.version;netPhase=j.phase;netDeadline=j.deadline;
