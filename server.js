@@ -9,6 +9,7 @@ function advance(r){if(Date.now()>=r.deadline){r.deadline=Date.now()+r.mode*1000
 function view(r){advance(r);return {version:r.version,phase:r.phase,deadline:r.deadline,mode:r.mode,ready:r.ready,pendingTurn:r.pendingTurn,state:r.state,log:r.log.slice(-25)}}
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),code=String(u.searchParams.get('code')||'CAOCAO').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
+ if(req.method==='GET'&&u.pathname==='/assets/Music_04_Siege_at_Red_Cliffs.mp3'){res.writeHead(200,{'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=86400'});return fs.createReadStream(path.join(__dirname,'Music_04_Siege_at_Red_Cliffs.mp3')).pipe(res)}
  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/classic')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){let b=await read(req),r=room(code);if(!r){r={state:null,version:0,phase:1,mode:[20,60,180,300].includes(+b.mode)?+b.mode:60,deadline:Date.now()+(+b.mode||60)*1000,ready:{wei:false,shu:false},pendingTurn:false,log:[]};rooms.set(code,r)}return reply(res,200,{ok:true,...view(r)})}
