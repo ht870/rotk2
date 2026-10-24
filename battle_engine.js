@@ -55,7 +55,7 @@ function heroEffects(heroes,round,side,ownN=0,enemyN=0){let dmg=1,guard=1,events
 function simulateBattle(src,dst,attHeroes,ai=false,expedition=null){let a=cities[src],b=cities[dst],originBefore={troops:a.troops,pool:a.pool},targetBefore={troops:b.troops,pool:b.pool},sent=expedition?expedition.sent:Math.floor(a.troops*.82),atkArmy=expedition?detachPercent(a,expedition.percent):detach(a,sent),defArmy=b.cohorts.map(x=>({...x})),battleLog=[],oldOwner=b.owner,originalAtk=sent,originalDef=b.troops,defHeroes=battleHeroes(b,true),maxRounds=8;
 let setup={atk:initialSide(atkArmy,attHeroes,false,0,defArmy.reduce((v,z)=>v+z.n,0)),def:initialSide(defArmy,defHeroes,true,b.safety,atkArmy.reduce((v,z)=>v+z.n,0))};
 let shownSkillA=new Set(setup.atk.passives.map(p=>p.hero+' — '+p.name)),shownSkillD=new Set(setup.def.passives.map(p=>p.hero+' — '+p.name));
-let warGold=expedition?expedition.gold:Math.floor(a.gold*.8),warFood=expedition?expedition.food:Math.floor(a.food*.8);a.gold-=warGold;a.food-=warFood;let aStart=atkArmy.reduce((s,x)=>s+x.n,0),dStart=defArmy.reduce((s,x)=>s+x.n,0),foodSpent=0,foodPerRound=Math.ceil(sent*.02);a.used=true;
+let warGold=expedition?expedition.gold:Math.floor(a.gold*.8),warFood=expedition?expedition.food:Math.floor(a.food*.8);a.gold-=warGold;a.food-=warFood;let aStart=atkArmy.reduce((s,x)=>s+x.n,0),dStart=defArmy.reduce((s,x)=>s+x.n,0),foodSpent=0,foodPerRound=Math.ceil(sent*.015);a.used=true;
 for(let r=1;r<=maxRounds;r++){if(atkArmy.every(c=>!c.n)||defArmy.every(c=>!c.n))break;let spent=Math.min(warFood,foodPerRound);warFood-=spent;foodSpent+=spent;let x=armyStats(atkArmy,attHeroes),y=armyStats(defArmy,defHeroes,true,b.safety),fx=heroEffects(attHeroes,r,'attacker',x.n,y.n),fy=heroEffects(defHeroes,r,'defender',y.n,x.n);if(x.n===0||y.n===0)break;
 let critA=Math.random()<x.crit?1.35:1,critB=Math.random()<y.crit?1.35:1;
 let dmgA=x.atk*1.05*(12/(12+y.def))*fx.dmg*fy.guard*critA*(warFood>0?1:.75),dmgB=y.atk*1.05*(12/(12+x.def))*fy.dmg*fx.guard*critB;
@@ -72,7 +72,7 @@ const split=(loss,isWinner)=>{let recovered=Math.floor(Math.max(0,loss)*recovera
 let aLoss=originalAtk-survivorsA,dLoss=originalDef-survivorsD,aRec=split(aLoss,won),dRec=split(dLoss,!won);
 let lootGold=0,lootFood=0;
 // Winner receives remaining supplies of defeated force; attacker victory captures city's stored resources.
-if(won){let old=b.owner,marching=officers(a).slice(),defending=officers(b).slice(),captureP=captureChance(a,b),retreat=cities.filter(x=>x.owner===old&&x.id!==b.id).sort((x,y)=>y.troops-x.troops)[0];
+if(won){let old=b.owner,marching=attHeroes.slice(),defending=officers(b).slice(),captureP=captureChance(a,b),retreat=cities.filter(x=>x.owner===old&&x.id!==b.id).sort((x,y)=>y.troops-x.troops)[0];
 lootGold=b.gold;lootFood=b.food;
 b.owner=a.owner;b.cohorts=atkArmy.filter(x=>x.n>0);syncTroops(b);b.used=true;
 b.gold+=warGold;b.food+=warFood;b.morale=Math.max(35,a.morale);
@@ -80,7 +80,7 @@ b.gold+=warGold;b.food+=warFood;b.morale=Math.max(35,a.morale);
 a.pool+=aRec.pool;addTroops(a,aRec.troops,trainingLevel(a));
 b.pool+=dRec.pool;addTroops(b,dRec.troops,trainingLevel(b));
 for(const k of ['commerce','harvest','manpower','safety','training'])if(b[k]!=null)b[k]=Math.round(b[k]*(1-brutality));
-for(const n of defending){if(Math.random()<captureP){captives[n]=a.owner;log('⛓ '+n+' captured!')}else if(retreat){retreat.officers.push(n)}else{wandering[n]=Math.floor(Math.random()*cities.length)}}if(retreat){retreat.officer=retreat.officers[0]||'None';merge(retreat,defArmy.filter(x=>x.n>0));}a.officers=[];a.officer='None';b.officers=marching;b.officer=marching[0]||'None';log('🏆 '+a.name+' captured '+b.name+' after '+battleLog.length+' rounds!')
+for(const n of defending){if(Math.random()<captureP){captives[n]=a.owner;log('⛓ '+n+' captured!')}else if(retreat){retreat.officers.push(n)}else{wandering[n]=Math.floor(Math.random()*cities.length)}}if(retreat){retreat.officer=retreat.officers[0]||'None';merge(retreat,defArmy.filter(x=>x.n>0));}a.officers=officers(a).filter(n=>!marching.includes(n));a.officer=a.officers[0]||'None';b.officers=marching;b.officer=marching[0]||'None';log('🏆 '+a.name+' captured '+b.name+' after '+battleLog.length+' rounds!')
 }else{merge(a,atkArmy.filter(x=>x.n>0));b.cohorts=defArmy.filter(x=>x.n>0);syncTroops(b);addTroops(a,aRec.troops,trainingLevel(a));a.pool+=aRec.pool;addTroops(b,dRec.troops,trainingLevel(b));b.pool+=dRec.pool;lootGold=warGold;lootFood=warFood;b.gold+=warGold;b.food+=warFood;for(const k of ['commerce','harvest','manpower','safety','training'])if(b[k]!=null)b[k]=Math.round(b[k]*(1-brutality));log('🛡 '+b.name+' defended against '+a.name+' ('+battleLog.length+' rounds).')}
 lastBattle={setup,won,foodSpent,foodPerRound,expeditionPercent:expedition?.percent??82,src,dst,attHeroes,defHeroes,battleLog,originalAtk,originalDef,survivorsA,survivorsD,oldOwner,brutality,aRec,dRec,lootGold,lootFood,originName:a.name,targetName:b.name,attackerOwner:a.owner,originDelta:{troops:a.troops-originBefore.troops,pool:a.pool-originBefore.pool},targetDelta:{troops:b.troops-targetBefore.troops,pool:b.pool-targetBefore.pool},turn};battleInbox.unshift({id:++battleSerial,data:lastBattle,unread:ai&&oldOwner===1});if(battleInbox.length>100)battleInbox.length=100;return won}
 function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,heroes,defending,safety),rawHP=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].hp,0),rawATK=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].atk,0),rawDEF=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].def,0),fx=heroEffects(heroes,1,defending?'defender':'attacker',st.n,enemyN);
@@ -91,7 +91,7 @@ function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,he
  const sent=Math.floor(a.troops*percent/100);
  if(!Number.isInteger(percent)||percent<1||percent>100||sent<1000)throw Error('Need at least 1000 troops');
  if(!Number.isInteger(gold)||gold<0||gold>a.gold)throw Error('Invalid expedition gold');
- if(!Number.isInteger(food)||food<Math.ceil(sent*.02)*8||food>a.food)throw Error('Insufficient expedition food');
+ if(!Number.isInteger(food)||food<Math.ceil(sent*.015)*8||food>a.food)throw Error('Insufficient expedition food');
  if(!Array.isArray(heroes)||heroes.length>3||new Set(heroes).size!==heroes.length||heroes.some(n=>!a.officers.includes(n)))throw Error('Invalid selected heroes');
  const won=simulateBattle(src,dst,heroes,false,{percent,sent,gold,food});
  st.logs=logs;st.captives=captives;st.wandering=wandering;st.battleInbox=battleInbox;st.battleSerial=battleSerial;st.lastBattle=lastBattle;

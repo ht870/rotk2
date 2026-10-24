@@ -36,3 +36,16 @@ Batch processing is atomic on validation errors (`rolledBack:true`), version loc
 Run `node test_api.js` for integration tests of attack, station, rollback, locking, and economy. Syntax checks and these local integration tests passed; **Render deployment and full browser-versus-API equivalence tests have not been performed**. The original combat algorithm is copied from the bundled browser client into `battle_engine.js`; this is not yet one shared runtime function between browser and server. Server turn economy is still provisional and may differ from the original browser economy. Server data is in RAM; redeploy resets rooms. GET state mutation has no authentication; use only in trusted game rooms. The existing browser `/api/save` snapshot flow can race with GET actions; version locking prevents stale overwrites but requires refresh.
 
 **Do not redeploy during a valuable game without a durable room-state backup.**
+
+## vNext experimental changes (2026-10-25)
+
+- Expedition food requirement and per-round consumption: 1.5% of deployed troops (previously 2%).
+- Passive food production: +30%; manual harvest: 1.5x yield and three-turn cooldown per city (stored in snapshot).
+- A/S domestic bonuses: +10% commerce development for INT >=85, +10% harvest development for POL >=85; server also adds +10% manpower development for high INT/POL specialists. Bonuses capped at +40%.
+- Wandering officers relocate to an adjacent city each turn, rather than teleporting to any city.
+- Captives belonging to the player's faction are visible in the recruitment market. Server `hire` accepts captive officer names with persuasion; client `persuade` uses current player faction.
+- Only selected attacking heroes relocate to captured city; unselected officers remain at origin.
+- Battle report casualties are displayed as losses *of the named side*, not enemy kills.
+- Server room controllers can be set on first `POST /api/join`: `{"controllers":{"wei":"human","shu":"ai","wu":"ai"}}`. Other valid combinations: 2 human + 1 AI, or all human. Defaults: Wei human, Shu human, Wu AI. AI takes simple economy/recruit actions and ends its turn automatically when a state snapshot is saved or a human ends turn. This is **not** a complete tactical AI and **not** a full 3-player browser lobby; Wu API actions are supported.
+
+Important: The browser still has legacy local turn/AI handling; authoritative server mode and offline mode have different orchestration. This build is experimental. Test in a new room; do not overwrite live rooms. Existing tests cover core API actions but do not fully test all new gameplay flows or multiplayer browser concurrency.
