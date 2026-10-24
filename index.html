@@ -585,7 +585,7 @@ const originalAction=action;
 // Action buttons remain in the contextual city management panel.
 
 // --- Classic multiplayer snapshot synchronization (experimental) ---
-const qs=new URLSearchParams(location.search),roomCode=(qs.get('room')||'CAOCAO').toUpperCase();
+const qs=new URLSearchParams(location.search),roomCode=(qs.get('code')||qs.get('room')||'CAOCAO').toUpperCase();
 const playerOwner=qs.get('side')==='wei'?0:1, playerSide=playerOwner===0?'wei':'shu';
 let netVersion=0,netPhase=1,netReady=false,netBusy=false,netApplying=false,netLast='',netQueued=false,netTurnPending=false,netDeadline=0;
 function snapshot(){return {cities,turn,over,logs,acted,fallen:[...fallen],wandering,discovered,searchCount,captives,offerPrices,lastAiHire,battleInbox,battleSerial,lastBattle,chosenHeroes,persuadeCount}}
@@ -595,16 +595,13 @@ const endpoint='/api/state?code='+encodeURIComponent(roomCode);
 function banner(s){let el=document.getElementById('onlineStatus');if(el)el.textContent=s}
 async function netRefresh(){if(netBusy||netApplying)return;try{const j=await (await fetch(endpoint,{cache:'no-store'})).json();if(!j.ok)return;
  if(j.stopped){banner('ROOM STOPPED · Open Lobby to restart');return}
- if(!j.state){netVersion=j.version;init();netLast='';await netCommit();return}
- netDeadline=j.deadline;netTurnPending=j.pendingTurn;netPhase=j.phase;
+ if(!j.state){netVersion=j.version;netDeadline=j.deadline||0;init();netLast='';await netCommit();return}
+ netDeadline=j.deadline||0;netTurnPending=j.pendingTurn;netPhase=j.phase;
  if(j.version!==netVersion){netVersion=j.version;if(j.state)applySnapshot(j.state)}
- banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · phase '+netPhase+' · '+Math.max(0,Math.ceil((netDeadline-Date.now())/1000))+'s'+(netTurnPending?' · advancing turn':''));
- if(netTurnPending&&playerSide==='shu')await applyTurnOnce();
+ banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · phase '+netPhase+' · '+(netDeadline?Math.max(0,Math.ceil((netDeadline-Date.now())/1000)):'waiting')+'s'+(netTurnPending?' · advancing turn':''));
+ // Server now advances turns; clients only synchronize snapshots.
  }catch(e){banner('OFFLINE: '+e.message)}}
-async function applyTurnOnce(){if(netBusy||!netTurnPending)return;netBusy=true;try{const j=await (await fetch(endpoint,{cache:'no-store'})).json();if(!j.pendingTurn||j.version!==netVersion)return;
- // Run original v2.4.6 economy/upkeep exactly once, without the old single-player AI turns.
- end();let updated=await req('/api/turn-applied?code='+roomCode,{version:netVersion,state:snapshot()});netVersion=updated.version;netTurnPending=false;netLast=JSON.stringify(snapshot());banner('Turn '+turn+' started');
- }catch(e){if(e.response?.state){netVersion=e.response.version;applySnapshot(e.response.state)}banner('Turn sync: '+e.message)}finally{netBusy=false}}
+// Server is the only authority for turn advancement.
 async function netCommit(){if(netBusy||netApplying||netTurnPending)return;let snap=snapshot(),serialized=JSON.stringify(snap);if(serialized===netLast)return;
  netBusy=true;try{const j=await req('/api/save?code='+roomCode,{version:netVersion,side:playerSide,state:snap,note:'Classic action '+playerSide});netVersion=j.version;netLast=serialized;banner('✓ Saved · '+playerSide.toUpperCase()+' · version '+netVersion)}
  catch(e){banner('Conflict — latest server state restored');if(e.response?.state){netVersion=e.response.version;applySnapshot(e.response.state)}}
@@ -618,12 +615,12 @@ document.body.appendChild(lobby);
 const lobbyButton=document.createElement('button');lobbyButton.textContent='☷ Lobby';lobbyButton.style.cssText='position:fixed;right:10px;top:5px;z-index:9999;background:#243a4a;color:#fff;border:1px solid #9c8556;border-radius:5px;padding:4px 9px;cursor:pointer';document.body.appendChild(lobbyButton);
 lobbyButton.onclick=()=>{lobby.style.display=lobby.style.display==='none'?'block':'none';document.getElementById('lobbyInfo').textContent='Room '+roomCode+' · '+playerSide.toUpperCase()+' · phase '+netPhase};
 document.getElementById('lobbyStop').onclick=async()=>{if(!confirm('Stop game '+roomCode+' untuk semua pemain?'))return;const j=await fetch('/api/stop?code='+encodeURIComponent(roomCode));banner((await j.json()).ok?'ROOM STOPPED':'Stop failed')};
-document.getElementById('lobbyRestart').onclick=async()=>{if(!confirm('Start NEW game? Current progress will be erased for all players.'))return;const mode=document.getElementById('lobbyMode').value;const j=await (await fetch('/api/restart?code='+encodeURIComponent(roomCode)+'&mode='+mode)).json();if(j.ok){netVersion=j.version;netPhase=1;netDeadline=j.deadline;netLast='';init();await netCommit();lobby.style.display='none';banner('New game · '+mode+' seconds')}else banner(j.error||'Restart failed')};
+document.getElementById('lobbyRestart').onclick=async()=>{if(!confirm('Start NEW game? Current progress will be erased for all players.'))return;const mode=document.getElementById('lobbyMode').value;const j=await (await fetch('/api/restart?code='+encodeURIComponent(roomCode)+'&mode='+mode)).json();if(j.ok){netVersion=j.version;netPhase=1;netDeadline=j.deadline||0;netLast='';init();await netCommit();lobby.style.display='none';banner('New game · '+mode+' seconds')}else banner(j.error||'Restart failed')};
 const bar=document.createElement('div');bar.id='onlineStatus';bar.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;background:#142536;color:#ffe2a3;padding:4px 12px;border:1px solid #b99554;border-radius:0 0 9px 9px;font:12px system-ui';bar.textContent='Connecting multiplayer...';document.body.appendChild(bar);
 init();closeCity();
-(async()=>{try{const j=await req('/api/join?code='+roomCode,{mode:Number(qs.get('mode'))||60,side:playerSide});netVersion=j.version;netPhase=j.phase;netDeadline=j.deadline;
+(async()=>{try{const j=await req('/api/join?code='+roomCode,{mode:Number(qs.get('mode'))||60,side:playerSide});netVersion=j.version;netPhase=j.phase;netDeadline=j.deadline||0;
  if(j.state)applySnapshot(j.state);else {netLast='';await netCommit()}
- netReady=true;setInterval(netRefresh,850);setInterval(()=>banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · '+Math.max(0,Math.ceil((netDeadline-Date.now())/1000))+'s'),1000);
+ netReady=true;setInterval(netRefresh,850);setInterval(()=>banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · '+(netDeadline?Math.max(0,Math.ceil((netDeadline-Date.now())/1000)):'waiting')+'s'),1000);
  banner('Connected as '+playerSide.toUpperCase());
  }catch(e){banner('Connection error: '+e.message)}})();
 
