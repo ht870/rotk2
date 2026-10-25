@@ -14,7 +14,7 @@ function authorize(r,side,t){return !!r&&!!r.started&&SIDES.includes(side)&&r.sl
 function requirePlayer(r,side,t){if(!authorize(r,side,t))throw Error('Unauthorized faction: join the lobby first')}
 function createRoom(mode,name){let r={state:null,version:0,phase:1,mode,deadline:null,ready:{wei:false,shu:false,wu:false},pendingTurn:false,stopped:false,log:[],initialized:false,started:false,hostToken:token(),slots:Object.fromEntries(SIDES.map(s=>[s,{kind:'open',name:null,token:null}])),controllers:{wei:'open',shu:'open',wu:'open'}};return r}
 function adjacent(id){return EDGES.filter(e=>e.includes(id)).map(e=>e[0]===id?e[1]:e[0])}
-function moveWanderers(st){if(!st.wandering)return;for(const [name,id] of Object.entries(st.wandering)){const next=adjacent(Number(id));if(next.length)st.wandering[name]=next[Math.floor(Math.random()*next.length)]}st.discovered={};st.offerPrices={}}
+function moveWanderers(st){if(!st.wandering)return;for(const [name,id] of Object.entries(st.wandering)){const next=adjacent(Number(id));if(next.length&&Math.random()<.7)st.wandering[name]=next[Math.floor(Math.random()*next.length)]}st.discovered={};st.offerPrices={}}
 
 // Server-authoritative turn boundary. The old client-only pendingTurn could deadlock
 // when the Shu browser was absent; transition now happens synchronously on API requests.
@@ -22,7 +22,7 @@ function startNextTurn(r){
  if(r.stopped||!r.state||r.state.over)return;
  const st=r.state;
  st.turn=(Number(st.turn)||1)+1;
- st.searchCount={};moveWanderers(st);
+ st.searchCount={};st.heroAP={};st.stationCooldown??={};for(const n of Object.keys(st.stationCooldown))if(st.stationCooldown[n]>0)st.stationCooldown[n]--;st.moveCD??={};for(const n of Object.keys(st.moveCD))if(st.moveCD[n]>0)st.moveCD[n]--;moveWanderers(st);st.heroAP={};for(const [n,v] of Object.entries(st.moveCD||{}))st.moveCD[n]=Math.max(0,v-1);for(const [id,effects] of Object.entries(st.spyEffects||{})){for(const [key,entry] of Object.entries(effects)){if(entry.until<st.turn)delete effects[key]}}
  for(const c of st.cities){
   c.used=false;ensureGovernor(c);
   const n=(c.officers||[]).length;
@@ -177,10 +177,23 @@ function spend(st,owner,cost){if(treasury(st,owner)<cost)return false;for(const 
 function tier(n){return HERO_TIERS[n]||'C'}
 function mergeCohort(c,number,level){if(number<=0)return;let x=c.cohorts.find(x=>x.lv===level);if(!x){x={lv:level,n:0,hp:0};c.cohorts.push(x)}x.n+=number;x.hp+=number*100;c.troops=c.cohorts.reduce((v,x)=>v+x.n,0)}
 function moveCohorts(a,b,n){let remaining=n,original=a.troops;for(const x of [...a.cohorts]){let take=Math.min(x.n,Math.floor(n*x.n/original));if(take){let hp=x.hp*take/x.n;x.n-=take;x.hp-=hp;let dst=b.cohorts.find(z=>z.lv===x.lv);if(dst){dst.n+=take;dst.hp+=hp}else b.cohorts.push({lv:x.lv,n:take,hp});remaining-=take}}for(const x of [...a.cohorts]){if(!remaining)break;let take=Math.min(x.n,remaining);if(take){let hp=x.hp*take/x.n;x.n-=take;x.hp-=hp;let dst=b.cohorts.find(z=>z.lv===x.lv);if(dst){dst.n+=take;dst.hp+=hp}else b.cohorts.push({lv:x.lv,n:take,hp});remaining-=take}}a.cohorts=a.cohorts.filter(x=>x.n>0);a.troops=a.cohorts.reduce((v,x)=>v+x.n,0);b.troops=b.cohorts.reduce((v,x)=>v+x.n,0)}
+const SPY_ACTIONS={steal:{base:55,cost:150},poison:{base:60,cost:120},sabotage:{base:55,cost:180},desertion:{base:45,cost:220},scout:{base:70,cost:100}};
+function apReady(st,n){return (st.heroAP?.[n]??1)>0}
+function useAP(st,n){st.heroAP??={};st.heroAP[n]=0}
+function spyPreview(st,owner,city,to,hero,operation){
+ const src=st.cities[Number(city)],target=st.cities[Number(to)],op=SPY_ACTIONS[operation];
+ if(!src||src.owner!==owner||!target||target.owner===owner||!adjacent(src.id).includes(target.id))throw Error('Spy requires adjacent enemy city');
+ if(!op)throw Error('Invalid espionage operation');
+ if(!(src.officers||[]).includes(hero))throw Error('Spy hero must be stationed at source city');
+ const stats=OFFICER_DATA[hero]||[55,55,55,55];const spy=.6*stats[2]+.4*stats[3];
+ const def=Math.max(0,...(target.officers||[]).map(n=>{const d=OFFICER_DATA[n]||[55,55,55,55];return .6*d[2]+.4*d[3]}));
+ return {operation,hero,city:src.id,to:target.id,successRate:Math.max(5,Math.min(90,op.base+.05*(spy-def))),goldCost:op.cost,apAvailable:apReady(st,hero)};
+}
 function applyAction(r,side,owner,act){
  const st=r.state,type=act.type,id=Number(act.city??act.from),c=st.cities[id];
  if(!Number.isInteger(id)||!c||c.owner!==owner)throw Error('Invalid or unowned city');
- const special=['search','hire','station','attack','governor'];
+ const special=['search','hire','station','attack','governor','spy','defense-tactic'];
+ const heroAction=['farm','food','recruit','fort','train','search','hire'].includes(type);const activeHero=heroAction?(c.officers||[]).find(n=>apReady(st,n)):null;if(heroAction&&!activeHero)throw Error('No hero AP available for '+type);
  if(!special.includes(type)&&c.used)throw Error('City already used this turn');
  let msg='',n=0;
  if(type==='farm'){n=Math.round(c.commerce*.44*actionMultiplier(c,'farm'));c.gold+=n;msg=c.name+' meningkatkan perdagangan (+'+n+' gold, INT bonus).'}
@@ -216,16 +229,35 @@ function applyAction(r,side,owner,act){
   const name=act.name;if(!(c.officers||[]).includes(name))throw Error('Governor must be stationed in city');
   c.governor=name;msg=name+' appointed governor of '+c.name;
  }
+ else if(type==='defense-tactic'){
+  const tactic=act.tactic;if(!['hold','fortify','counter'].includes(tactic))throw Error('Invalid defense tactic');
+  st.defenseTactics??={};st.defenseTactics[id]=tactic;msg=c.name+' defense stance: '+tactic;
+ }
+ else if(type==='spy'){
+  const hero=act.hero||act.name,operation=act.operation||act.op;
+  const preview=spyPreview(st,owner,id,act.to,hero,operation);
+  if(!preview.apAvailable)throw Error('Hero has no AP');
+  if(!spend(st,owner,preview.goldCost))throw Error('Insufficient Gold');
+  useAP(st,hero);const target=st.cities[preview.to],success=Math.random()*100<preview.successRate;
+  if(success){st.spyEffects??={};st.spyEffects[target.id]??={};
+   if(operation==='steal'){const stolen=Math.min(500,Math.floor(target.gold*.1));target.gold-=stolen;c.gold+=stolen;msg=hero+' stole '+stolen+' Gold from '+target.name}
+   else if(operation==='poison'){const lost=Math.floor(target.food*.15);target.food=Math.max(0,target.food-lost);msg=hero+' destroyed '+lost+' Food in '+target.name}
+   else if(operation==='sabotage'){st.spyEffects[target.id].sabotage={until:st.turn+1,amount:.25};msg=hero+' sabotaged '+target.name+' defense (-25%, 2 turns)'}
+   else if(operation==='desertion'){target.morale=Math.max(0,target.morale-12);msg=hero+' reduced '+target.name+' morale by 12'}
+   else if(operation==='scout'){st.scoutIntel??={};st.scoutIntel[owner]??={};st.scoutIntel[owner][target.id]={stance:st.defenseTactics?.[target.id]||'fortify',turn:st.turn};msg=hero+' scouted '+target.name+' stance: '+st.scoutIntel[owner][target.id].stance}
+  }else msg=hero+' failed '+operation+' against '+target.name;
+  msg+=' ('+preview.successRate.toFixed(1)+'% success, '+preview.goldCost+' Gold, 1 AP)';
+ }
  else if(type==='station'){
  const dst=Number(act.to),t=st.cities[dst],names=act.heroes;
  if(!Number.isInteger(dst)||!t||t.owner!==owner||!EDGES.some(e=>e.includes(id)&&e.includes(dst)))throw Error('Station requires adjacent friendly city');
  if(!Array.isArray(names)||!names.length||new Set(names).size!==names.length)throw Error('Select officers to station');
- st.stationCooldown??={};
- if(names.some(n=>!(c.officers||[]).includes(n)||(st.stationCooldown[n]||0)>st.turn))throw Error('Officer missing or on station cooldown');
+ st.moveCD??={};
+ if(names.some(n=>!(c.officers||[]).includes(n)||(st.moveCD[n]||0)>0||!apReady(st,n)))throw Error('Officer missing, out of AP or on move cooldown');
  t.officers??=[];
- for(const name of names){c.officers.splice(c.officers.indexOf(name),1);t.officers.push(name);st.stationCooldown[name]=st.turn+2}
+ for(const name of names){c.officers.splice(c.officers.indexOf(name),1);t.officers.push(name);st.moveCD[name]=2;useAP(st,name)}
  c.officer=c.officers[0]||'None';t.officer=t.officers[0]||'None';ensureGovernor(c);ensureGovernor(t);
- msg=names.join(', ')+' moved '+c.name+' → '+t.name+' (2-turn cooldown, free action)';
+ msg=names.join(', ')+' moved '+c.name+' → '+t.name+' (1 AP each, move cooldown 2)';
  }
  else if(type==='attack'){
  const dst=Number(act.to),t=st.cities[dst];
@@ -234,10 +266,13 @@ function applyAction(r,side,owner,act){
  const gold=act.gold==null?Math.floor(c.gold*.3):Number(act.gold);
  const food=act.food==null?Math.ceil(sent*.03)*8:Number(act.food);
  const heroes=act.heroes??(c.officers||[]).slice(0,3);
- const result=runBattle(st,id,dst,heroes,pct,gold,food);
+ if(!Array.isArray(heroes)||heroes.length===0||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
+ const result=runBattle(st,id,dst,heroes,pct,gold,food,{attacker:act.tactic||'assault',defender:st.defenseTactics?.[dst]||'fortify'});
+ for(const n of heroes)useAP(st,n);
  msg='Battle '+c.name+' → '+t.name+': '+(result.won?'captured':'defended')+' ('+result.report.battleLog.length+' rounds)';
  }
  else throw Error('Unsupported action: '+type);
+ if(heroAction)useAP(st,activeHero);
  if(!special.includes(type))c.used=true;
  st.logs.unshift('T'+st.turn+' · '+msg);return msg;
 }
@@ -321,9 +356,15 @@ http.createServer(async(req,res)=>{try{
  rooms.set(code,copy);
  return reply(res,200,{ok:true,actions:messages,...view(copy)});
  }
+ if(req.method==='GET'&&u.pathname==='/api/spy-preview'){
+  const r=room(code),q=u.searchParams;if(!r||!r.state)return reply(res,404,{error:'Room unavailable'});
+  requirePlayer(r,q.get('side'),q.get('token'));
+  try{return reply(res,200,{ok:true,...spyPreview(r.state,SIDES.indexOf(q.get('side')),q.get('city'),q.get('to'),q.get('hero'),q.get('operation'))})}
+  catch(e){return reply(res,400,{error:e.message})}
+ }
  if(req.method==='GET'&&u.pathname==='/api/action'){let r=room(code),q=u.searchParams;if(!r)return reply(res,404,{error:'Room not found'});requirePlayer(r,q.get('side'),q.get('token'));advance(r);if(r.stopped||r.pendingTurn||!r.state)return reply(res,409,{error:'Room not active or awaiting turn transition'});let side=q.get('side'),owner=SIDES.indexOf(side);if(owner<0)return reply(res,400,{error:'Invalid side'});if(r.ready[side])return reply(res,409,{error:'Side already ended turn'});
  const v=q.get('version');if(v!==null&&Number(v)!==r.version)return reply(res,409,{error:'Version mismatch',currentVersion:r.version});
- const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};const msg=applyAction(copy,side,owner,act);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
+ const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};const msg=applyAction(copy,side,owner,act);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
  if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){
@@ -335,7 +376,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;r.state.harvestCooldown??={};if(!r.initialized){r.initialized=true;r.deadline=Date.now()+r.mode*1000;}r.version++;autoAI(r);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;r.deadline=Date.now()+r.mode*1000;}r.version++;autoAI(r);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');r.ready[b.side]=true;r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});
