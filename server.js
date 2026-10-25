@@ -29,14 +29,14 @@ function startNextTurn(r){
   // Baseline development until the classic officer-stat engine is ported.
   const stat=Math.min(110,65+n*4);const domestic=domesticBonuses(c);
   c.manpower=(c.manpower||0)+Math.round(stat*domestic.learning*actionMultiplier(c,'manpower'));
-  c.pool=(c.pool||0)+c.manpower*.04;
+  c.pool=(c.pool||0)+c.manpower*.04*1.2;
   c.safety=(c.safety||0)+stat;
   c.commerce=(c.commerce||0)+Math.round(stat*domestic.trade*actionMultiplier(c,'commerce'));
   c.harvest=(c.harvest||0)+Math.round(stat*domestic.farm*actionMultiplier(c,'agriculture'));
   c.training=(c.training||0)+Math.round(stat*actionMultiplier(c,'train')*.25);
   c.gold=(c.gold||0)+Math.max(1,Math.floor(c.commerce*.005));
   c.food=Math.max(0,(c.food||0)+Math.max(1,Math.floor(c.harvest*.013))-Math.ceil(c.troops*.08));
-  if(c.food===0){c.troops=Math.max(300,Math.floor(c.troops*.94));c.morale=Math.max(20,(c.morale||65)-10)}
+  if(c.food===0){c.troops=Math.max(300,Math.floor(c.troops*.82));c.morale=Math.max(20,(c.morale||65)-30)}
   else{c.troops=Math.max(300,Math.round(c.troops*.996));c.morale=Math.min(100,(c.morale||65)+2)}
   if(Array.isArray(c.cohorts)&&c.cohorts.length===1){
    const cohort=c.cohorts[0],oldN=cohort.n||c.troops;
@@ -92,7 +92,7 @@ function autoAI(r){
      const ratio=attack.strength/Math.max(1,defense.strength);
      const deploy=Math.min(90,Math.max(60,Math.round(75+Math.min(15,(ratio-1)*12))));
      const sent=Math.floor(c.troops*deploy/100);
-     const food=Math.ceil(sent*.015)*8;
+     const food=Math.ceil(sent*.03)*8;
      const score=ratio+(t.troops<2500?.35:0)+(t.food<300?.12:0)-(c.food<food?10:0);
      plans.push({c,t,ratio,score,deploy,food,heroes:attack.heroes});
     }
@@ -167,7 +167,7 @@ function rankedStat(c,weights){
 }
 function officerStat(c,k){return rankedStat(c,[0,1,2,3].map(i=>i===k?1:0))}
 function statFor(c,type){return rankedStat(c,({recruit:[1,0,0,0],food:[0,0,0,1],farm:[0,0,.4,.6],train:[.6,.4,0,0],fort:[0,.6,0,.4],search:[0,0,.6,.4],hire:[0,0,.6,.4],commerce:[0,0,.4,.6],agriculture:[0,0,0,1],manpower:[.4,0,0,.6]})[type]||[0,0,0,0])}
-function multiplier(score){return 1+2*score*score/(score*score+250*250)}
+function multiplier(score){return 1+2*Math.pow(score,2.0897)/(Math.pow(score,2.0897)+Math.pow(600,2.0897))}
 function actionMultiplier(c,type){return multiplier(statFor(c,type))}
 function priceFor(st,name,id){const key=name+'@'+id;if(st.offerPrices[key]==null){const stats=OFFICER_DATA[name]||[55,55,55,55];st.offerPrices[key]=Math.round(({C:300,B:600,A:1200,S:2100}[tier(name)]+3*stats.reduce((a,b)=>a+b,0))*(.4+Math.random()*1.2))}return st.offerPrices[key]}
 function costDiscount(c,base){return Math.max(1,Math.round(base/actionMultiplier(c,'hire')))}
@@ -184,11 +184,11 @@ function applyAction(r,side,owner,act){
  if(!special.includes(type)&&c.used)throw Error('City already used this turn');
  let msg='',n=0;
  if(type==='farm'){n=Math.round(c.commerce*.44*actionMultiplier(c,'farm'));c.gold+=n;msg=c.name+' meningkatkan perdagangan (+'+n+' gold, INT bonus).'}
- else if(type==='food'){st.harvestCooldown??={};if((st.harvestCooldown[id]||0)>st.turn)throw Error('Harvest cooldown until turn '+st.harvestCooldown[id]);n=Math.round(c.harvest*1.5*actionMultiplier(c,'food'));c.food+=n;st.harvestCooldown[id]=st.turn+3;msg=c.name+' memanen '+n+' food (POL bonus).'}
+ else if(type==='food'){st.harvestCooldown??={};if((st.harvestCooldown[id]||0)>st.turn)throw Error('Harvest cooldown until turn '+st.harvestCooldown[id]);n=Math.round(c.harvest*actionMultiplier(c,'food'));c.food+=n;st.harvestCooldown[id]=st.turn+3;msg=c.name+' memanen '+n+' food (POL bonus).'}
  else if(type==='recruit'){if(c.gold<130)throw Error('Need 130 gold');n=Math.min(Math.floor(c.pool),Math.round(Math.max(1,c.manpower)*.85*actionMultiplier(c,'recruit')));if(n<1)throw Error('POOL exhausted');c.gold-=130;c.pool-=n;let level=c.training>=9000?5:c.training>=5000?4:c.training>=2500?3:c.training>=1000?2:1;mergeCohort(c,n,level);msg=c.name+' merekrut '+n+' prajurit (LDR bonus).'}
  else if(type==='fort'){if(c.gold<100)throw Error('Need 100 gold');c.gold-=100;c.safety+=Math.round(Math.max(1,c.safety)*.35*actionMultiplier(c,'fort'));msg='Fortified '+c.name}
  else if(type==='train'){if(c.gold<90)throw Error('Need 90 gold');c.gold-=90;c.morale=Math.min(100,c.morale+25);c.training+=Math.round(Math.max(1,c.trainingBase||220)*actionMultiplier(c,'train'));msg='Trained '+c.name}
- else if(type==='intel'){const adjacent=EDGES.filter(e=>e.includes(id)).map(e=>st.cities[e[0]===id?e[1]:e[0]]).filter(t=>t.owner!==owner);if(!adjacent.length)throw Error('No neighboring enemy');const t=adjacent.sort((a,b)=>b.troops-a.troops)[0];msg='Intel '+c.name+': '+t.name+' has '+t.troops+' troops, morale '+t.morale+', food '+t.food+'.'}
+ else if(type==='intel'){throw Error('Scout removed in v2.6.1');const adjacent=EDGES.filter(e=>e.includes(id)).map(e=>st.cities[e[0]===id?e[1]:e[0]]).filter(t=>t.owner!==owner);if(!adjacent.length)throw Error('No neighboring enemy');const t=adjacent.sort((a,b)=>b.troops-a.troops)[0];msg='Intel '+c.name+': '+t.name+' has '+t.troops+' troops, morale '+t.morale+', food '+t.food+'.'}
  else if(type==='move'){const dst=Number(act.to),t=st.cities[dst];if(!Number.isInteger(dst)||!t||t.owner!==owner)throw Error('Invalid friendly destination');if(!EDGES.some(e=>e.includes(id)&&e.includes(dst)))throw Error('Not adjacent');n=Math.floor(c.troops*.5);if(n<1)throw Error('No troops');moveCohorts(c,t,n);msg='Moved '+n+' troops '+c.name+' → '+t.name}
  else if(type==='search'){
   const used=st.searchCount[id]||0;if(used>=3)throw Error('Search limit 3 per city per turn');
@@ -232,7 +232,7 @@ function applyAction(r,side,owner,act){
  if(!Number.isInteger(dst)||!t||t.owner===owner||!EDGES.some(e=>e.includes(id)&&e.includes(dst)))throw Error('Attack requires adjacent enemy city');
  const pct=act.percent==null?70:Number(act.percent),sent=Math.floor(c.troops*pct/100);
  const gold=act.gold==null?Math.floor(c.gold*.3):Number(act.gold);
- const food=act.food==null?Math.ceil(sent*.015)*8:Number(act.food);
+ const food=act.food==null?Math.ceil(sent*.03)*8:Number(act.food);
  const heroes=act.heroes??(c.officers||[]).slice(0,3);
  const result=runBattle(st,id,dst,heroes,pct,gold,food);
  msg='Battle '+c.name+' → '+t.name+': '+(result.won?'captured':'defended')+' ('+result.report.battleLog.length+' rounds)';

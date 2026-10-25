@@ -3,7 +3,8 @@ const source=fs.readFileSync(path.join(__dirname,'server.js'),'utf8').split('htt
 const sandbox={require:(id)=>id==='./battle_engine'?{runBattle:()=>({won:false,report:{battleLog:[1]}})}:require(id),__dirname,process,console,setInterval:()=>({unref(){}}),Map,Math};
 vm.createContext(sandbox);vm.runInContext(source,sandbox);
 const evalJS=x=>vm.runInContext(x,sandbox);
-assert(Math.abs(evalJS('multiplier(500)')-2.6)<1e-9);
+assert(Math.abs(evalJS('multiplier(600)')-2)<1e-9);
+assert(Math.abs(evalJS('multiplier(400)')-1.6)<0.001);
 assert(evalJS('multiplier(900)')>evalJS('multiplier(500)'));
 assert(evalJS('multiplier(900)')<3);
 const city={id:0,name:'Test',owner:0,officers:['Zhuge Liang'],gold:20000,food:5000,harvest:500,commerce:500,manpower:500,pool:3000,training:0,safety:500,troops:5000,morale:80,cohorts:[{lv:1,n:5000,hp:500000}]};
