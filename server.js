@@ -268,6 +268,13 @@ function applyAction(r,side,owner,act){
  const heroes=act.heroes??(c.officers||[]).slice(0,3);
  if(!Array.isArray(heroes)||heroes.length===0||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
  const result=runBattle(st,id,dst,heroes,pct,gold,food,{attacker:act.tactic||'assault',defender:st.defenseTactics?.[dst]||'fortify'});
+ // Record defender-facing notifications for server-executed AI attacks.
+ // The battle engine defaults to ai=false and therefore cannot mark them unread.
+ if(r.controllers?.[side]==='ai'&&r.controllers?.[SIDES[result.report.oldOwner]]==='human'){
+  const item=st.battleInbox?.[0];
+  if(item&&item.data===result.report)item.unread=true;
+ }
+
  for(const n of heroes)useAP(st,n);
  msg='Battle '+c.name+' → '+t.name+': '+(result.won?'captured':'defended')+' ('+result.report.battleLog.length+' rounds)';
  }
