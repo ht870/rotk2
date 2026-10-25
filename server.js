@@ -5,6 +5,7 @@ const lobbyHtml=fs.readFileSync(path.join(__dirname,'lobby.html'));
 const crypto=require('crypto');
 const rooms=new Map(),PORT=process.env.PORT||3000;
 const {runBattle}=require('./battle_engine');
+const ROTK_ECONOMY=require('./economy_engine');
 function reply(res,status,obj){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 function read(req){return new Promise((ok,no)=>{let s='';req.on('data',d=>{s+=d;if(s.length>3000000){req.destroy();no(Error('Too large'))}});req.on('end',()=>{try{ok(JSON.parse(s||'{}'))}catch(e){no(e)}})})}
 function room(code){return rooms.get(code)}
@@ -23,27 +24,26 @@ function startNextTurn(r){
  const st=r.state;
  st.turn=(Number(st.turn)||1)+1;
  st.searchCount={};st.heroAP={};st.stationCooldown??={};for(const n of Object.keys(st.stationCooldown))if(st.stationCooldown[n]>0)st.stationCooldown[n]--;st.moveCD??={};for(const n of Object.keys(st.moveCD))if(st.moveCD[n]>0)st.moveCD[n]--;moveWanderers(st);st.heroAP={};for(const [n,v] of Object.entries(st.moveCD||{}))st.moveCD[n]=Math.max(0,v-1);for(const [id,effects] of Object.entries(st.spyEffects||{})){for(const [key,entry] of Object.entries(effects)){if(entry.until<st.turn)delete effects[key]}}
- for(const c of st.cities){
-  c.used=false;ensureGovernor(c);
-  const n=(c.officers||[]).length;
-  // Baseline development until the classic officer-stat engine is ported.
-  const stat=Math.min(110,65+n*4);const domestic=domesticBonuses(c);
-  c.manpower=(c.manpower||0)+Math.round(stat*domestic.learning*actionMultiplier(c,'manpower'));
-  c.pool=(c.pool||0)+c.manpower*.04*1.2;
-  c.safety=(c.safety||0)+stat;
-  c.commerce=(c.commerce||0)+Math.round(stat*domestic.trade*actionMultiplier(c,'commerce'));
-  c.harvest=(c.harvest||0)+Math.round(stat*domestic.farm*actionMultiplier(c,'agriculture'));
-  c.training=(c.training||0)+Math.round(stat*actionMultiplier(c,'train')*.25);
-  c.gold=(c.gold||0)+Math.max(1,Math.floor(c.commerce*.005));
-  c.food=Math.max(0,(c.food||0)+Math.max(1,Math.floor(c.harvest*.013))-Math.ceil(c.troops*.08));
-  if(c.food===0){c.troops=Math.max(300,Math.floor(c.troops*.82));c.morale=Math.max(20,(c.morale||65)-30)}
-  else{c.troops=Math.max(300,Math.round(c.troops*.996));c.morale=Math.min(100,(c.morale||65)+2)}
-  if(Array.isArray(c.cohorts)&&c.cohorts.length===1){
-   const cohort=c.cohorts[0],oldN=cohort.n||c.troops;
-   cohort.hp=(cohort.hp||oldN*100)*(c.troops/oldN);
-   cohort.n=c.troops;
-  }
- }
+ const ctx={
+  normalize(c){
+   if(!Array.isArray(c.cohorts)||!c.cohorts.length)return;
+   const oldTotal=c.cohorts.reduce((n,x)=>n+(Number(x.n)||0),0);
+   const target=Math.max(0,Math.round(c.troops));
+   if(oldTotal===target)return;
+   if(target===0){c.cohorts=[];return}
+   if(oldTotal<=0){c.cohorts=[{lv:1,n:target,hp:target*100}];return}
+   let assigned=0;
+   c.cohorts.forEach((co,i)=>{const oldN=Number(co.n)||0;const n=i===c.cohorts.length-1?target-assigned:Math.min(target-assigned,Math.round(oldN*target/oldTotal));co.n=n;co.hp=(Number(co.hp)||oldN*100)*(oldN? n/oldN:0);assigned+=n});
+   c.cohorts=c.cohorts.filter(x=>x.n>0);
+  },
+  stat:officerStat,
+  domesticMultiplier(c,k){let bonus=1;for(const n of c.officers||[]){if(!['S','A'].includes(tier(n)))continue;const v=OFFICER_DATA[n]||[55,55,55,55];if(k===2&&v[2]>=85)bonus+=.1;if(k===3&&v[3]>=85)bonus+=.1}return Math.min(1.4,bonus)},
+  developGain(c){return Math.round(c.commerce*actionMultiplier(c,'farm'))},
+  capturedLocked(c){return c.capturedTurn===st.turn-1}
+ };
+ let trades=0,totalTrade=0;
+ for(const c of st.cities){ensureGovernor(c);const result=ROTK_ECONOMY.apply(c,ctx);if(result.trade){trades++;totalTrade+=result.trade}c.used=false}
+ if(trades)(st.logs||(st.logs=[])).unshift('Auto Trade: '+trades+' idle cities earned '+totalTrade+' Gold.');
  (st.logs||(st.logs=[])).unshift('T'+st.turn+' · Server advanced turn with officer development multipliers.');
  r.phase++;r.ready={wei:false,shu:false,wu:false};r.pendingTurn=false;
  r.deadline=Date.now()+r.mode*1000;r.version++;
@@ -295,6 +295,7 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='GET'&&u.pathname==='/assets/Music_04_Siege_at_Red_Cliffs.mp3'){res.writeHead(200,{'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=86400'});return fs.createReadStream(path.join(__dirname,'Music_04_Siege_at_Red_Cliffs.mp3')).pipe(res)}
  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/lobby')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(lobbyHtml)}
+ if(req.method==='GET'&&u.pathname==='/economy_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'economy_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/classic'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}
  if(req.method==='POST'&&u.pathname==='/api/lobby/create'){
   if(room(code))return reply(res,409,{error:'Room code already exists'});

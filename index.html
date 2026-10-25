@@ -228,7 +228,7 @@ body.city-open #cityPanel{display:block}
 </style><style>
 .spy275{font-size:12px;display:grid;gap:10px;text-align:left}.spy275-top{display:grid;grid-template-columns:1fr 1fr;gap:10px}.spy275-top label{font-size:11px;display:grid;gap:5px;color:#c7c4b8}.spy275-top select{width:100%;font-size:12px;padding:7px}.spy275-select{font-size:12px;display:flex;align-items:center;gap:6px}.spy275-select small{font-size:10px;color:#b4b0a3}.spy275-rows{max-height:330px;overflow-y:auto;display:grid;gap:6px}.spy275-row{display:grid;grid-template-columns:minmax(95px,1fr) 44px minmax(115px,1fr) minmax(130px,1.2fr);align-items:center;gap:8px;padding:8px;border:1px solid #625438;border-radius:7px;background:#17231e}.spy275-name{display:flex;align-items:center;gap:5px;font-size:12px}.spy275-chance{color:#e1bd68;font-weight:700;text-align:center;font-size:12px}.spy275-effect{color:#c2c8bf;font-size:11px}.spy275-gold{display:grid;gap:3px;font-size:11px}.spy275-gold input{width:100%;accent-color:#d4af37}.spy275-total{text-align:right;font-size:12px;color:#e1bd68}.spy275-results{display:grid;gap:5px;font-size:11px;font-weight:400}.spy275-results div{padding:5px;border-bottom:1px solid #3b493d}.spy275-ok{color:#83d39c}.spy275-fail{color:#e69b93}@media(max-width:600px){.spy275-top{grid-template-columns:1fr}.spy275-row{grid-template-columns:1fr 45px;gap:5px}.spy275-effect{grid-column:1}.spy275-gold{grid-column:2;grid-row:2}}
 </style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v2.7.2 · War Tactics & Espionage · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Peta isometric Three Kingdoms"></svg></div><div class="maptools"><button id="zoomOut">−</button><span>Drag map · Pinch / Zoom</span><button id="zoomIn">+</button><button id="resetMap">Reset</button></div><div class="legend"><span><i class="dot" style="background:#3b82f6"></i>Wei</span><span><i class="dot" style="background:#22c55e"></i>Shu (Kamu)</span><span><i class="dot" style="background:#ef4444"></i>Wu</span></div><p class="tip">Diminishing returns berdasarkan ranking tiap stat. LDR membangun POOL, WAR membangun SAFETY, INT membangun COMMERCE, POL membangun HARVEST setiap turn. Kota menghasilkan 0.5% gold dan 1% food pasif. Satu aksi per kota per turn. Hero bisa tertangkap atau kabur.</p><button id="restart">New Game</button> <button id="encyclopedia">📜 Hero Encyclopedia</button> <button id="sound">🔊 Sound ON</button> <button id="bgm">♫ Music OFF</button> <button id="end" style="background:#795b29">End Turn ▶</button></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Pilih kota</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="train">Drill</button><button id="hire">🔎 Search Officers</button><button id="station">Station Officer →</button><button id="governor">🏛 Appoint Governor</button></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
-<div id="audioControls"><label>🔊 SFX <input id="sfxSlider" type="range" min="0" max="300" value="180" aria-label="SFX volume"></label><label>♫ Music <input id="musicSlider" type="range" min="0" max="300" value="280" aria-label="Music volume"></label></div><button id="inboxButton" title="Battle Inbox">✉ Inbox <span class="unread" id="inboxUnread"></span></button><div id="battleOverlay"><div id="battleBox"><h2 id="battleTitle"></h2><div id="battleBody"></div><div id="battleButtons" class="battlebuttons"></div></div></div><script>
+<div id="audioControls"><label>🔊 SFX <input id="sfxSlider" type="range" min="0" max="300" value="180" aria-label="SFX volume"></label><label>♫ Music <input id="musicSlider" type="range" min="0" max="300" value="280" aria-label="Music volume"></label></div><button id="inboxButton" title="Battle Inbox">✉ Inbox <span class="unread" id="inboxUnread"></span></button><div id="battleOverlay"><div id="battleBox"><h2 id="battleTitle"></h2><div id="battleBody"></div><div id="battleButtons" class="battlebuttons"></div></div></div><script src="/economy_engine.js"></script><script>
 (()=>{'use strict';
 const defs=[
 ['Chang’an',140,165,0,0],['Luoyang',275,165,0,0],['Ye',390,75,0,0],['Xuchang',395,220,0,0],
@@ -683,34 +683,13 @@ function aiMove(owner){
 function check(){let owners=new Set(cities.map(c=>c.owner));if(owners.size===1){over=true;log(owners.has(playerOwner)?'🏆 VICTORY! '+['Wei','Shu','Wu'][playerOwner]+' menyatukan Tiongkok!':'💀 GAME OVER! '+['Wei','Shu','Wu'][playerOwner]+' telah jatuh.')}else if(!owners.has(0)||!owners.has(1)){over=true;log('🏁 Salah satu pemain telah kehilangan semua kota.')}}
  // Single deterministic turn ledger: preview and End Turn share the same calculations.
  // The preview runs on a clone, so inspecting a city never changes live state.
- function applyCityTurnEconomy(c,allowAutoTrade){
-  normalize(c);
-  const before={gold:c.gold,food:c.food,pool:c.pool,safety:c.safety,manpower:c.manpower||0,commerce:c.commerce,harvest:c.harvest,training:c.training,troops:c.troops,morale:c.morale};
-  let trade=0;
-  if(allowAutoTrade&&!c.used&&!capturedLocked(c)){
-   trade=Math.round(developGain(c)*.44);
-   c.gold+=trade;c.used=true;
-  }
-  const growth=cityTurnGrowth(c);
-  c.manpower=growth.manpower;
-  c.pool+=growth.pool;
-  c.safety+=growth.safety;
-  c.commerce+=Math.round(stat(c,2)*domesticMultiplier(c,2));
-  c.harvest+=Math.round(stat(c,3)*domesticMultiplier(c,3));
-  c.training+=(stat(c,0)+stat(c,1))/2;
-  c.gold+=Math.max(1,Math.floor(c.commerce*.005));
-  c.food=Math.max(0,c.food+Math.max(1,Math.floor(c.harvest*.013))-Math.ceil(c.troops*.08));
-  if(c.food===0){c.troops=Math.max(300,Math.floor(c.troops*.82));c.morale=Math.max(20,c.morale-30)}
-  else{c.troops=Math.max(300,Math.round(c.troops*.996));c.morale=Math.min(100,c.morale+2)}
-  normalize(c);
-  const delta={};for(const key of Object.keys(before))delta[key]=c[key]-before[key];
-  return {delta,trade};
- }
- function previewCityTurn(c){return applyCityTurnEconomy(JSON.parse(JSON.stringify(c)),true).delta}
+ function economyContext(){return {normalize,stat,domesticMultiplier,developGain,capturedLocked}}
+ function applyCityTurnEconomy(c){return ROTK_ECONOMY.apply(c,economyContext())}
+ function previewCityTurn(c){return ROTK_ECONOMY.preview(c,economyContext())}
  function end(){if(over)return;sfx('turn');mode='';check();if(!over){
   let autoTrades=0,autoGold=0;
   // Calculate each city's economy exactly once, including optional Auto Trade.
-  for(const c of cities){const result=applyCityTurnEconomy(c,true);if(result.trade){autoTrades++;autoGold+=result.trade}}
+  for(const c of cities){const result=applyCityTurnEconomy(c);if(result.trade){autoTrades++;autoGold+=result.trade}}
   if(autoTrades)log('Auto Trade: '+autoTrades+' idle cities earned '+autoGold.toLocaleString()+' Gold.');
   turn++;searchCount={};discovered={};searchRolls={};heroAP={};
   for(const n of Object.keys(stationCooldown))if(stationCooldown[n]>0)stationCooldown[n]--;
