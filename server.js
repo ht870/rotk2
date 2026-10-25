@@ -250,6 +250,7 @@ function applyAction(r,side,owner,act){
    else if(operation==='desertion'){target.morale=Math.max(0,target.morale-12);msg=hero+' reduced '+target.name+' morale by 12'}
    else if(operation==='scout'){st.scoutIntel??={};st.scoutIntel[owner]??={};st.scoutIntel[owner][target.id]={stance:st.defenseTactics?.[target.id]||'fortify',turn:st.turn};msg=hero+' scouted '+target.name+' stance: '+st.scoutIntel[owner][target.id].stance}
   }else msg=hero+' failed '+operation+' against '+target.name;
+  st.incidentInbox??=[];st.incidentInbox.unshift({id:'spy-'+st.turn+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),owner:target.owner,city:target.name,kind:'Espionage',turn:st.turn,message:'Enemy espionage activity was detected in '+target.name+'. Review city resources and defenses.'});st.incidentInbox=st.incidentInbox.slice(0,100);
   msg+=' ('+preview.successRate.toFixed(1)+'% success, '+preview.goldCost+' Gold, 1 AP)';
  }
  else if(type==='station'){
@@ -270,14 +271,11 @@ function applyAction(r,side,owner,act){
  const gold=act.gold==null?Math.floor(c.gold*.3):Number(act.gold);
  const food=act.food==null?Math.ceil(sent*.03)*8:Number(act.food);
  const heroes=act.heroes??(c.officers||[]).slice(0,3);
- if(!Array.isArray(heroes)||heroes.length===0||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
+ if(!Array.isArray(heroes)||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
  const result=runBattle(st,id,dst,heroes,pct,gold,food,{attacker:act.tactic||'assault',defender:st.defenseTactics?.[dst]||'fortify'});
- // Record defender-facing notifications for server-executed AI attacks.
- // The battle engine defaults to ai=false and therefore cannot mark them unread.
- if(r.controllers?.[side]==='ai'&&r.controllers?.[SIDES[result.report.oldOwner]]==='human'){
-  const item=st.battleInbox?.[0];
-  if(item&&item.data===result.report)item.unread=true;
- }
+ // Any defender who was attacked must receive the full battle report.
+ const item=st.battleInbox?.[0];
+ if(item&&item.data===result.report&&result.report.oldOwner!==owner)item.unread=true;
 
  for(const n of heroes)useAP(st,n);
  msg='Battle '+c.name+' → '+t.name+': '+(result.won?'captured':'defended')+' ('+result.report.battleLog.length+' rounds)';
