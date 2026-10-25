@@ -24,16 +24,16 @@ function startNextTurn(r){
  st.turn=(Number(st.turn)||1)+1;
  st.searchCount={};moveWanderers(st);
  for(const c of st.cities){
-  c.used=false;
+  c.used=false;ensureGovernor(c);
   const n=(c.officers||[]).length;
   // Baseline development until the classic officer-stat engine is ported.
   const stat=Math.min(110,65+n*4);const domestic=domesticBonuses(c);
-  c.manpower=(c.manpower||0)+Math.round(stat*domestic.learning);
+  c.manpower=(c.manpower||0)+Math.round(stat*domestic.learning*actionMultiplier(c,'manpower'));
   c.pool=(c.pool||0)+c.manpower*.04;
   c.safety=(c.safety||0)+stat;
-  c.commerce=(c.commerce||0)+Math.round(stat*domestic.trade);
-  c.harvest=(c.harvest||0)+Math.round(stat*domestic.farm);
-  c.training=(c.training||0)+stat;
+  c.commerce=(c.commerce||0)+Math.round(stat*domestic.trade*actionMultiplier(c,'commerce'));
+  c.harvest=(c.harvest||0)+Math.round(stat*domestic.farm*actionMultiplier(c,'agriculture'));
+  c.training=(c.training||0)+Math.round(stat*actionMultiplier(c,'train')*.25);
   c.gold=(c.gold||0)+Math.max(1,Math.floor(c.commerce*.005));
   c.food=Math.max(0,(c.food||0)+Math.max(1,Math.floor(c.harvest*.013))-Math.ceil(c.troops*.08));
   if(c.food===0){c.troops=Math.max(300,Math.floor(c.troops*.94));c.morale=Math.max(20,(c.morale||65)-10)}
@@ -44,7 +44,7 @@ function startNextTurn(r){
    cohort.n=c.troops;
   }
  }
- (st.logs||(st.logs=[])).unshift('T'+st.turn+' · Server advanced turn; economy uses provisional officer bonuses.');
+ (st.logs||(st.logs=[])).unshift('T'+st.turn+' · Server advanced turn with officer development multipliers.');
  r.phase++;r.ready={wei:false,shu:false,wu:false};r.pendingTurn=false;
  r.deadline=Date.now()+r.mode*1000;r.version++;
  r.log.push({phase:r.phase,side:'system',txt:'Turn '+st.turn+' started (server)'});
@@ -85,7 +85,7 @@ function autoAI(r){
    }
    // Prioritize battles by combat-capability, garrison quality and available food.
    const plans=[];
-   for(const c of own.filter(c=>!c.used&&front(c))){
+   for(const c of own.filter(c=>front(c))){
     const attack=power(c);
     for(const t of enemyNeighbors(c)){
      const defense=power(t);
@@ -99,7 +99,7 @@ function autoAI(r){
    }
    plans.sort((a,b)=>b.score-a.score);
    for(const p of plans){
-    if(p.c.used||p.c.owner!==owner||p.t.owner===owner)continue;
+    if(p.c.owner!==owner||p.t.owner===owner)continue;
     // The original 1.45 raw-troop threshold made AI passive against elite armies.
     // Elite-adjusted strength permits calculated attacks but not obvious suicide missions.
     if(p.ratio>=1.20&&p.c.troops>=2100&&p.c.food>=p.food&&p.c.morale>=48){
@@ -157,7 +157,23 @@ Object.assign(OFFICER_DATA,{"Xun You":[85,25,94,92],"Zhuge Dan":[86,73,83,70],"D
 const HERO_TIERS={"Guan Yu":"S","Zhang Fei":"S","Zhao Yun":"S","Ma Chao":"S","Huang Zhong":"S","Zhuge Liang":"S","Cao Cao":"S","Sima Yi":"S","Zhou Yu":"S","Lu Xun":"S","Zhang Liao":"S","Lü Bu":"S","Pang Tong":"S","Guo Jia":"S","Jia Xu":"S","Xun Yu":"S","Sun Ce":"S","Sun Jian":"S","Jiang Wei":"S","Zhang He":"S","Liu Bei":"S","Sun Quan":"S","Xiahou Dun":"A","Xiahou Yuan":"A","Xu Huang":"A","Dian Wei":"A","Xu Chu":"A","Cao Ren":"A","Gan Ning":"A","Taishi Ci":"A","Wei Yan":"A","Pang De":"A","Lu Meng":"A","Lu Su":"A","Xu Shu":"A","Fa Zheng":"A","Yu Jin":"A","Gao Shun":"A","Chen Gong":"A","Zhang Ren":"A","Yan Yan":"A","Zhou Tai":"A","Zhuge Jin":"A","Huang Gai":"A","Cheng Pu":"A","Wang Ping":"A","Guan Ping":"A","Zhang Bao":"A","Ding Feng":"A","Xun You":"A","Zhuge Dan":"A","Deng Ai":"A","Zhong Hui":"A","Wen Yang":"A","Liao Hua":"B","Cao Hong":"B","Zhu Huan":"B","Li Dian":"B","Yue Jin":"B","Han Dang":"B","Ma Dai":"B","Guan Xing":"B","Zhang Yi":"B","Zhang Ni":"B","Wu Yi":"B","Fei Yi":"B","Dong Yun":"B","Jiang Wan":"B","Liu Feng":"B","Meng Huo":"B","Zhu Rong":"B","Cao Pi":"B","Cao Zhi":"B","Cao Zhang":"B","Sima Shi":"B","Sima Zhao":"B","Man Chong":"B","Tian Yu":"B","Wen Ping":"B","Zang Ba":"B","Xu Sheng":"B","Pan Zhang":"B","Jiang Qin":"B","Ling Tong":"B","He Qi":"B","Bu Zhi":"B","Zhang Zhao":"B","Zhang Hong":"B","Kan Ze":"B","Lu Fan":"B","Cao Bao":"C","Han Xuan":"C","Yang Song":"C","Liu Xian":"C","Fu Shiren":"C","Mi Fang":"C","Han Hao":"C","Mi Zhu":"C","Liu Zhang":"C","Liu Biao":"C","Liu Qi":"C","Huang Zu":"C","Cai Mao":"C","Zhang Yun":"C","Chen Deng":"C","Chen Gui":"C","Tao Qian":"C","Kong Rong":"C","Kong Zhou":"C","Han Fu":"C","Liu Dai":"C","Wang Lang":"C","Yan Baihu":"C","Xu Gong":"C","Zhang Lu":"C","Yang Ren":"C","Yang Ang":"C","Hou Cheng":"C","Song Xian":"C","Wei Xu":"C","Li Jue":"C","Guo Si":"C","Fan Chou":"C","Zhang Ji":"C","Ji Ling":"C","Lei Bo":"C","Liu Du":"C","Zhao Fan":"C","Liu Yan":"C","Gongsun Zan":"C"};
 const EDGES=[[0,1],[0,4],[1,2],[1,3],[1,4],[2,3],[2,9],[3,4],[3,7],[3,9],[4,5],[4,6],[4,7],[5,6],[6,7],[7,10],[7,9],[8,9],[8,10],[8,11],[9,10],[10,11],[12,0],[12,4],[13,2],[13,9],[14,10],[14,11],[14,7]];
 function domesticBonuses(c){let trade=1,farm=1,learning=1;for(const name of c.officers||[]){const st=OFFICER_DATA[name]||[55,55,55,55];if(!['S','A'].includes(HERO_TIERS[name]))continue;if(st[2]>=85)trade+=.10;if(st[3]>=85)farm+=.10;if(st[2]>=90&&st[3]>=80)learning+=.10;}return {trade:Math.min(1.4,trade),farm:Math.min(1.4,farm),learning:Math.min(1.4,learning)}}
-function officerStat(c,k){return (c.officers||[]).map(n=>(OFFICER_DATA[n]||[55,55,55,55])[k]).sort((a,b)=>b-a).reduce((sum,value,i)=>sum+value/(1+i*.1),0)}
+// Backlog 1/5: ranking by action-relevant weighted score; governor is intentionally counted twice.
+function rankedStat(c,weights){
+ const ranked=(c.officers||[]).map(name=>({name,stats:OFFICER_DATA[name]||[55,55,55,55]}))
+   .map(o=>({...o,score:weights.reduce((v,w,i)=>v+w*o.stats[i],0)}))
+   .sort((a,b)=>b.score-a.score);
+ const total=ranked.reduce((v,o,i)=>v+o.score*Math.max(0,1-i*.1),0);
+ const governor=(c.officers||[]).includes(c.governor)?c.governor:(c.officers||[])[0];
+ const gs=governor?(OFFICER_DATA[governor]||[55,55,55,55]):[0,0,0,0];
+ return total+weights.reduce((v,w,i)=>v+w*gs[i],0);
+}
+function officerStat(c,k){return rankedStat(c,[0,1,2,3].map(i=>i===k?1:0))}
+function statFor(c,type){return rankedStat(c,({recruit:[1,0,0,0],food:[0,0,0,1],farm:[0,0,.4,.6],train:[.6,.4,0,0],fort:[0,.6,0,.4],search:[0,0,.6,.4],hire:[0,0,.6,.4],commerce:[0,0,.4,.6],agriculture:[0,0,0,1],manpower:[.4,0,0,.6]})[type]||[0,0,0,0])}
+function multiplier(score){return 1+2*score*score/(score*score+250*250)}
+function actionMultiplier(c,type){return multiplier(statFor(c,type))}
+function priceFor(st,name,id){const key=name+'@'+id;if(st.offerPrices[key]==null){const stats=OFFICER_DATA[name]||[55,55,55,55];st.offerPrices[key]=Math.round(({C:300,B:600,A:1200,S:2100}[tier(name)]+3*stats.reduce((a,b)=>a+b,0))*(.4+Math.random()*1.2))}return st.offerPrices[key]}
+function costDiscount(c,base){return Math.max(1,Math.round(base/actionMultiplier(c,'hire')))}
+function ensureGovernor(c){if(!(c.officers||[]).includes(c.governor))c.governor=(c.officers||[])[0]||null}
 function treasury(st,owner){return st.cities.filter(c=>c.owner===owner).reduce((n,c)=>n+c.gold,0)}
 function spend(st,owner,cost){if(treasury(st,owner)<cost)return false;for(const c of st.cities.filter(c=>c.owner===owner).sort((a,b)=>b.gold-a.gold)){const v=Math.min(c.gold,cost);c.gold-=v;cost-=v;if(!cost)break}return true}
 function tier(n){return HERO_TIERS[n]||'C'}
@@ -166,18 +182,41 @@ function moveCohorts(a,b,n){let remaining=n,original=a.troops;for(const x of [..
 function applyAction(r,side,owner,act){
  const st=r.state,type=act.type,id=Number(act.city??act.from),c=st.cities[id];
  if(!Number.isInteger(id)||!c||c.owner!==owner)throw Error('Invalid or unowned city');
- const special=['search','hire','station'];
+ const special=['search','hire','station','attack','governor'];
  if(!special.includes(type)&&c.used)throw Error('City already used this turn');
  let msg='',n=0;
- if(type==='farm'){n=Math.round(c.commerce*.44);c.gold+=n;msg=c.name+' meningkatkan perdagangan (+'+n+' gold, INT bonus).'}
- else if(type==='food'){st.harvestCooldown??={};if((st.harvestCooldown[id]||0)>st.turn)throw Error('Harvest cooldown until turn '+st.harvestCooldown[id]);n=Math.round(c.harvest*1.5);c.food+=n;st.harvestCooldown[id]=st.turn+3;msg=c.name+' memanen '+n+' food (POL bonus).'}
- else if(type==='recruit'){if(c.gold<130)throw Error('Need 130 gold');n=Math.min(Math.floor(c.pool),Math.round(450+officerStat(c,0)*9));if(n<1)throw Error('POOL exhausted');c.gold-=130;c.pool-=n;let level=c.training>=9000?5:c.training>=5000?4:c.training>=2500?3:c.training>=1000?2:1;mergeCohort(c,n,level);msg=c.name+' merekrut '+n+' prajurit (LDR bonus).'}
- else if(type==='fort'){if(c.gold<100)throw Error('Need 100 gold');c.gold-=100;c.safety+=Math.round(300+officerStat(c,1)*1.5);msg='Fortified '+c.name}
- else if(type==='train'){if(c.gold<90)throw Error('Need 90 gold');c.gold-=90;c.morale=Math.min(100,c.morale+25);c.training+=Math.round(220+(officerStat(c,0)+officerStat(c,1))*1.8);msg='Trained '+c.name}
+ if(type==='farm'){n=Math.round(c.commerce*.44*actionMultiplier(c,'farm'));c.gold+=n;msg=c.name+' meningkatkan perdagangan (+'+n+' gold, INT bonus).'}
+ else if(type==='food'){st.harvestCooldown??={};if((st.harvestCooldown[id]||0)>st.turn)throw Error('Harvest cooldown until turn '+st.harvestCooldown[id]);n=Math.round(c.harvest*1.5*actionMultiplier(c,'food'));c.food+=n;st.harvestCooldown[id]=st.turn+3;msg=c.name+' memanen '+n+' food (POL bonus).'}
+ else if(type==='recruit'){if(c.gold<130)throw Error('Need 130 gold');n=Math.min(Math.floor(c.pool),Math.round(Math.max(1,c.manpower)*.85*actionMultiplier(c,'recruit')));if(n<1)throw Error('POOL exhausted');c.gold-=130;c.pool-=n;let level=c.training>=9000?5:c.training>=5000?4:c.training>=2500?3:c.training>=1000?2:1;mergeCohort(c,n,level);msg=c.name+' merekrut '+n+' prajurit (LDR bonus).'}
+ else if(type==='fort'){if(c.gold<100)throw Error('Need 100 gold');c.gold-=100;c.safety+=Math.round(Math.max(1,c.safety)*.35*actionMultiplier(c,'fort'));msg='Fortified '+c.name}
+ else if(type==='train'){if(c.gold<90)throw Error('Need 90 gold');c.gold-=90;c.morale=Math.min(100,c.morale+25);c.training+=Math.round(Math.max(1,c.trainingBase||220)*actionMultiplier(c,'train'));msg='Trained '+c.name}
  else if(type==='intel'){const adjacent=EDGES.filter(e=>e.includes(id)).map(e=>st.cities[e[0]===id?e[1]:e[0]]).filter(t=>t.owner!==owner);if(!adjacent.length)throw Error('No neighboring enemy');const t=adjacent.sort((a,b)=>b.troops-a.troops)[0];msg='Intel '+c.name+': '+t.name+' has '+t.troops+' troops, morale '+t.morale+', food '+t.food+'.'}
  else if(type==='move'){const dst=Number(act.to),t=st.cities[dst];if(!Number.isInteger(dst)||!t||t.owner!==owner)throw Error('Invalid friendly destination');if(!EDGES.some(e=>e.includes(id)&&e.includes(dst)))throw Error('Not adjacent');n=Math.floor(c.troops*.5);if(n<1)throw Error('No troops');moveCohorts(c,t,n);msg='Moved '+n+' troops '+c.name+' → '+t.name}
- else if(type==='search'){const used=st.searchCount[id]||0;if(used>=3)throw Error('Search limit 3 per city per turn');if(!spend(st,owner,100))throw Error('Need 100 treasury gold');st.searchCount[id]=used+1;const found=[];for(const [name,loc] of Object.entries(st.wandering||{})){if(Number(loc)!==id||(st.discovered[id]||[]).includes(name)||st.cities.some(city=>(city.officers||[]).includes(name)))continue;const chance={S:.05,A:.15,B:.35,C:.60}[tier(name)];if(Math.random()<chance){(st.discovered[id]??=[]).push(name);found.push(name);const key=name+'@'+id;if(st.offerPrices[key]==null){const stats=OFFICER_DATA[name]||[55,55,55,55];const base=Math.round((210+stats[0]*2+stats[1]*2+stats[2])*1.25);st.offerPrices[key]=Math.max(50,Math.round(base*(.5+Math.random()*2.5)))}}}msg=c.name+' Search #'+st.searchCount[id]+': '+(found.length?'found '+found.join(', '):'no officers found')}
- else if(type==='hire'){const name=act.name;if(st.captives?.[name]===owner){const fee={S:200,A:120,B:60,C:25}[tier(name)];const price=st.offerPrices?.[name+'@'+id]??Math.round(OFFICER_DATA[name].reduce((a,b)=>a+b,0)*2);if(treasury(st,owner)<fee+price)throw Error('Not enough gold');spend(st,owner,fee);if(Math.random()<Math.max(.08,{S:.15,A:.35,B:.60,C:.85}[tier(name)])){spend(st,owner,price);c.officers.push(name);c.officer=c.officers[0];delete st.captives[name];msg=name+' captured officer recruited at '+c.name}else msg=name+' refused persuasion';}else {if(!name||st.wandering[name]!==id||!(st.discovered[id]||[]).includes(name))throw Error('Officer not discovered at this city');const price=st.offerPrices[name+'@'+id];if(!Number.isFinite(price))throw Error('Missing hire price');const fee={S:200,A:120,B:60,C:25}[tier(name)];if(treasury(st,owner)<fee+price)throw Error('Not enough treasury for persuasion and hire');spend(st,owner,fee);const chance=Math.max(.04,Math.min(.92,{S:.15,A:.35,B:.60,C:.85}[tier(name)]+Math.min(.12,(officerStat(c,2)+officerStat(c,3))/2500)));if(Math.random()<chance){spend(st,owner,price);c.officers.push(name);c.officer=c.officers[0];delete st.wandering[name];st.discovered[id]=st.discovered[id].filter(x=>x!==name);msg=name+' hired in '+c.name+' for '+price+' gold'}else msg=name+' rejected persuasion ('+fee+' gold)'}
+ else if(type==='search'){
+  const used=st.searchCount[id]||0;if(used>=3)throw Error('Search limit 3 per city per turn');
+  const cost=costDiscount(c,100);if(!spend(st,owner,cost))throw Error('Need '+cost+' treasury gold');
+  st.searchCount[id]=used+1;
+  const candidates=Object.entries(st.wandering||{}).filter(([name,loc])=>Number(loc)===id&&!(st.discovered[id]||[]).includes(name)&&!st.cities.some(city=>(city.officers||[]).includes(name)));
+  const found=[];const bonus=.4*(1-1/actionMultiplier(c,'search'))/(1-1/3);
+  const chance=Math.min(1,Math.random()*.6+bonus);
+  for(const [name] of candidates)if(Math.random()<chance){(st.discovered[id]??=[]).push(name);found.push(name);priceFor(st,name,id)}
+  msg=c.name+' Search #'+st.searchCount[id]+' ('+cost+' gold, '+Math.round(chance*100)+'%): '+(found.length?'found '+found.join(', '):'no officers found');
+ }
+ else if(type==='hire'){
+  const name=act.name;if(!name||!OFFICER_DATA[name])throw Error('Unknown hero');
+  const captured=st.captives?.[name]===owner;
+  if(!captured&&(st.wandering[name]!==id||!(st.discovered[id]||[]).includes(name)))throw Error('Officer not discovered at this city');
+  const fee=costDiscount(c,{S:200,A:120,B:60,C:25}[tier(name)]);
+  const base=priceFor(st,name,id),price=Math.max(1,Math.round(base*(captured?.7:1)/actionMultiplier(c,'hire')));
+  if(treasury(st,owner)<fee+price)throw Error('Not enough treasury for persuasion and hire ('+(fee+price)+')');
+  spend(st,owner,fee);
+  const chance=captured?Math.max(.08,{S:.15,A:.35,B:.60,C:.85}[tier(name)]):Math.max(.04,Math.min(.92,{S:.15,A:.35,B:.60,C:.85}[tier(name)]+Math.min(.12,statFor(c,'hire')/2500)));
+  if(Math.random()<chance){spend(st,owner,price);c.officers.push(name);ensureGovernor(c);if(captured)delete st.captives[name];else{delete st.wandering[name];st.discovered[id]=st.discovered[id].filter(x=>x!==name)}c.officer=c.officers[0];msg=name+' hired in '+c.name+' for '+price+' gold (persuasion '+fee+')'}
+  else msg=name+' rejected persuasion ('+fee+' gold)';
+ }
+ else if(type==='governor'){
+  const name=act.name;if(!(c.officers||[]).includes(name))throw Error('Governor must be stationed in city');
+  c.governor=name;msg=name+' appointed governor of '+c.name;
  }
  else if(type==='station'){
  const dst=Number(act.to),t=st.cities[dst],names=act.heroes;
@@ -187,7 +226,7 @@ function applyAction(r,side,owner,act){
  if(names.some(n=>!(c.officers||[]).includes(n)||(st.stationCooldown[n]||0)>st.turn))throw Error('Officer missing or on station cooldown');
  t.officers??=[];
  for(const name of names){c.officers.splice(c.officers.indexOf(name),1);t.officers.push(name);st.stationCooldown[name]=st.turn+2}
- c.officer=c.officers[0]||'None';t.officer=t.officers[0]||'None';
+ c.officer=c.officers[0]||'None';t.officer=t.officers[0]||'None';ensureGovernor(c);ensureGovernor(t);
  msg=names.join(', ')+' moved '+c.name+' → '+t.name+' (2-turn cooldown, free action)';
  }
  else if(type==='attack'){
@@ -207,6 +246,13 @@ function applyAction(r,side,owner,act){
 
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),code=String(u.searchParams.get('code')||'CAOCAO').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
+ if(req.method==='GET'&&/^\/Music\/backmusic(?:[1-9]|1[0-9]|20)\.mp3$/.test(u.pathname)){
+  const filename=path.basename(u.pathname),file=path.join(__dirname,'Music',filename);
+  try{const stat=fs.statSync(file);if(!stat.isFile())throw Error('Not a file');
+   res.writeHead(200,{'Content-Type':'audio/mpeg','Content-Length':stat.size,'Cache-Control':'public, max-age=3600'});
+   return fs.createReadStream(file).pipe(res);
+  }catch(e){res.writeHead(404,{'Content-Type':'text/plain'});return res.end('Music track not found: '+filename)}
+ }
  if(req.method==='GET'&&u.pathname==='/assets/Music_04_Siege_at_Red_Cliffs.mp3'){res.writeHead(200,{'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=86400'});return fs.createReadStream(path.join(__dirname,'Music_04_Siege_at_Red_Cliffs.mp3')).pipe(res)}
  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/lobby')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(lobbyHtml)}
  if(req.method==='GET'&&u.pathname==='/classic'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}

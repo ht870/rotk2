@@ -283,17 +283,45 @@ function showMarket(){
 
 function tone(freq,duration=.13,type='sine',gain=.075,delay=0){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(Math.min(.22,gain*(gain<=.024?musicVolume:sfxVolume)),t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02)}catch(e){}}
 let musicOn=false,musicTimer=null,musicStep=0;
-const classicBgm=new Audio('/assets/Music_04_Siege_at_Red_Cliffs.mp3');
-classicBgm.loop=true;classicBgm.preload='auto';classicBgm.playsInline=true;
+const BGM_COUNT=20;
+const classicBgm=new Audio('/Music/backmusic1.mp3');
+classicBgm.loop=true;
+classicBgm.preload='auto';
+classicBgm.playsInline=true;
+let bgmTrack=1, bgmNextTurn=null, bgmLastObservedTurn=null;
+const bgmRandomDelay=()=>3+Math.floor(Math.random()*3); // 3, 4, or 5 turns
+function bgmPickDifferentTrack(){
+ let next=1+Math.floor(Math.random()*(BGM_COUNT-1));
+ if(next>=bgmTrack)next++;
+ return next;
+}
 function updateClassicMusicVolume(){classicBgm.volume=soundOn&&musicOn?Math.min(1,musicVolume/3):0}
 function musicStatus(message){const b=$('bgm');if(b)b.title=message}
-classicBgm.addEventListener('error',()=>musicStatus('Music file could not load (check /assets/Music_04_Siege_at_Red_Cliffs.mp3).'));
-classicBgm.addEventListener('playing',()=>musicStatus('Music is playing'));
-function musicTick(){} // Legacy synthesized music replaced by audio track #4.
+classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
+classicBgm.addEventListener('playing',()=>musicStatus('Playing backmusic'+bgmTrack+'.mp3; next change at turn '+bgmNextTurn));
+function bgmObserveTurn(currentTurn){
+ const t=Number(currentTurn);
+ if(!Number.isFinite(t)||t<1)return;
+ if(bgmLastObservedTurn===null||t<bgmLastObservedTurn){
+  bgmLastObservedTurn=t;
+  bgmNextTurn=t+bgmRandomDelay();
+  return;
+ }
+ if(t<=bgmLastObservedTurn)return;
+ bgmLastObservedTurn=t;
+ if(t<bgmNextTurn)return;
+ bgmTrack=bgmPickDifferentTrack();
+ bgmNextTurn=t+bgmRandomDelay();
+ classicBgm.src='/Music/backmusic'+bgmTrack+'.mp3';
+ classicBgm.load();
+ if(musicOn&&soundOn)classicBgm.play().catch(e=>musicStatus('Playback blocked: '+e.message));
+ musicStatus('Changed to backmusic'+bgmTrack+'.mp3; next change at turn '+bgmNextTurn);
+}
+function musicTick(){} // BGM is driven by the shared turn counter, not elapsed time.
 async function toggleMusic(){
  musicOn=!musicOn;updateClassicMusicVolume();$('bgm').textContent=musicOn?'♫ Music ON':'♫ Music OFF';
  if(!musicOn){classicBgm.pause();musicStatus('Music paused');return}
- try{await classicBgm.play();musicStatus('Music is playing')}
+ try{await classicBgm.play();musicStatus('Playing backmusic'+bgmTrack+'.mp3')}
  catch(e){musicOn=false;updateClassicMusicVolume();$('bgm').textContent='♫ Music BLOCKED';musicStatus('Playback failed: '+e.message+' — click Music again or check Safari site audio permissions');console.warn('Music playback failed',e)}
 }
 function sfx(name){if(name==='reject'){if(!soundOn)return;tone(330,.16,'triangle',.065);tone(220,.25,'triangle',.07,.16);return}if(name==='legendary'){for(let i=0;i<7;i++)tone([220,330,440,554,659,880,1108][i],.4,'triangle',.085,i*.16);tone(110,.9,'sawtooth',.045);return}if(name==='blue'){tone(540,.15,'sine',.045);tone(700,.18,'sine',.035,.13);return}if(name==='common'){tone(480,.10,'sine',.028);return}if(name==='hero'){for(let i=0;i<4;i++)tone([392,523,659,784][i],.25,'triangle',.065,i*.13);return}if(!soundOn)return;if(name==='attack'){for(let i=0;i<5;i++){tone(85+i*8,.17,'sawtooth',.035,i*.095);tone(180+i*43,.09,'square',.015,i*.095+.05)}return}if(name==='recruit'){for(let i=0;i<4;i++)tone(115,.14,'triangle',.045,i*.13);tone(523,.38,'sawtooth',.026,.26);return}if(name==='food'){for(let i=0;i<5;i++)tone(260+i*35,.055,'triangle',.026,i*.075);return}if(name==='farm'){for(let i=0;i<6;i++)tone(850+i*90,.08,'sine',.036,i*.065);return}let seq={recruit:[[392,0],[523,.12],[659,.24]],food:[[330,0],[440,.1],[554,.2]],farm:[[523,0],[659,.12]],fort:[[160,0],[120,.13]],train:[[440,0],[587,.12],[740,.24]],intel:[[650,0],[880,.1]],station:[[300,0],[500,.12]],hire:[[392,0],[523,.12],[784,.24]],move:[[260,0],[310,.1]],attack:[[130,0],[98,.13],[175,.26]],win:[[523,0],[659,.14],[784,.28],[1046,.43]],lose:[[330,0],[260,.2],[196,.4]],turn:[[440,0],[550,.12]]}[name]||[];for(let [f,d] of seq)tone(f,name==='attack'?.22:.15,name==='attack'||name==='fort'?'triangle':'sine',.07,d)}
@@ -598,7 +626,7 @@ const qs=new URLSearchParams(location.search),roomCode=(qs.get('code')||qs.get('
 const playerSide=['wei','shu','wu'].includes(qs.get('side'))?qs.get('side'):'shu', playerOwner=['wei','shu','wu'].indexOf(playerSide), playerToken=qs.get('token')||'';
 let netVersion=0,netPhase=1,netReady=false,netBusy=false,netApplying=false,netLast='',netQueued=false,netTurnPending=false,netDeadline=0;
 function snapshot(){return {cities,turn,over,logs,acted,fallen:[...fallen],wandering,discovered,searchCount,harvestCooldown,captives,offerPrices,lastAiHire,battleInbox,battleSerial,lastBattle,chosenHeroes,persuadeCount,stationCooldown}}
-function applySnapshot(s){if(!s)return;netApplying=true;cities=s.cities;turn=s.turn;over=s.over;logs=s.logs||[];acted=s.acted;fallen=new Set(s.fallen||[]);wandering=s.wandering||{};discovered=s.discovered||{};searchCount=s.searchCount||{};harvestCooldown=s.harvestCooldown||{};captives=s.captives||{};offerPrices=s.offerPrices||{};lastAiHire=s.lastAiHire||{0:-10,2:-10};battleInbox=s.battleInbox||[];battleSerial=s.battleSerial||0;lastBattle=s.lastBattle||null;chosenHeroes=[];persuadeCount=s.persuadeCount||{};stationCooldown=s.stationCooldown||{};mode='';if(cities[selected]?.owner!==playerOwner)selected=cities.find(c=>c.owner===playerOwner)?.id||0;draw();netApplying=false;netLast=JSON.stringify(snapshot())}
+function applySnapshot(s){if(!s)return;netApplying=true;cities=s.cities;turn=s.turn;bgmObserveTurn(turn);over=s.over;logs=s.logs||[];acted=s.acted;fallen=new Set(s.fallen||[]);wandering=s.wandering||{};discovered=s.discovered||{};searchCount=s.searchCount||{};harvestCooldown=s.harvestCooldown||{};captives=s.captives||{};offerPrices=s.offerPrices||{};lastAiHire=s.lastAiHire||{0:-10,2:-10};battleInbox=s.battleInbox||[];battleSerial=s.battleSerial||0;lastBattle=s.lastBattle||null;chosenHeroes=[];persuadeCount=s.persuadeCount||{};stationCooldown=s.stationCooldown||{};mode='';if(cities[selected]?.owner!==playerOwner)selected=cities.find(c=>c.owner===playerOwner)?.id||0;draw();netApplying=false;netLast=JSON.stringify(snapshot())}
 async function req(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw Object.assign(Error(j.error||'Server error'),{response:j});return j}
 const endpoint='/api/state?code='+encodeURIComponent(roomCode);
 function banner(s){let el=document.getElementById('onlineStatus');if(el)el.textContent=s}
@@ -626,7 +654,7 @@ lobbyButton.onclick=()=>{lobby.style.display=lobby.style.display==='none'?'block
 document.getElementById('lobbyStop').onclick=()=>location.href='/lobby?code='+encodeURIComponent(roomCode);
 document.getElementById('lobbyRestart').onclick=()=>location.href='/lobby?code='+encodeURIComponent(roomCode);
 const bar=document.createElement('div');bar.id='onlineStatus';bar.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;background:#142536;color:#ffe2a3;padding:4px 12px;border:1px solid #b99554;border-radius:0 0 9px 9px;font:12px system-ui';bar.textContent='Connecting multiplayer...';document.body.appendChild(bar);
-init();closeCity();
+init();bgmObserveTurn(turn);closeCity();
 (async()=>{try{const j=await req('/api/join?code='+roomCode,{mode:Number(qs.get('mode'))||60,side:playerSide,token:playerToken});netVersion=j.version;netPhase=j.phase;netDeadline=j.deadline||0;
  if(j.state)applySnapshot(j.state);else {netLast='';await netCommit()}
  netReady=true;setInterval(netRefresh,850);setInterval(()=>banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · '+(netDeadline?Math.max(0,Math.ceil((netDeadline-Date.now())/1000)):'waiting')+'s'),1000);
