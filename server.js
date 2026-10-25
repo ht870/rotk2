@@ -157,15 +157,13 @@ Object.assign(OFFICER_DATA,{"Xun You":[85,25,94,92],"Zhuge Dan":[86,73,83,70],"D
 const HERO_TIERS={"Guan Yu":"S","Zhang Fei":"S","Zhao Yun":"S","Ma Chao":"S","Huang Zhong":"S","Zhuge Liang":"S","Cao Cao":"S","Sima Yi":"S","Zhou Yu":"S","Lu Xun":"S","Zhang Liao":"S","Lü Bu":"S","Pang Tong":"S","Guo Jia":"S","Jia Xu":"S","Xun Yu":"S","Sun Ce":"S","Sun Jian":"S","Jiang Wei":"S","Zhang He":"S","Liu Bei":"S","Sun Quan":"S","Xiahou Dun":"A","Xiahou Yuan":"A","Xu Huang":"A","Dian Wei":"A","Xu Chu":"A","Cao Ren":"A","Gan Ning":"A","Taishi Ci":"A","Wei Yan":"A","Pang De":"A","Lu Meng":"A","Lu Su":"A","Xu Shu":"A","Fa Zheng":"A","Yu Jin":"A","Gao Shun":"A","Chen Gong":"A","Zhang Ren":"A","Yan Yan":"A","Zhou Tai":"A","Zhuge Jin":"A","Huang Gai":"A","Cheng Pu":"A","Wang Ping":"A","Guan Ping":"A","Zhang Bao":"A","Ding Feng":"A","Xun You":"A","Zhuge Dan":"A","Deng Ai":"A","Zhong Hui":"A","Wen Yang":"A","Liao Hua":"B","Cao Hong":"B","Zhu Huan":"B","Li Dian":"B","Yue Jin":"B","Han Dang":"B","Ma Dai":"B","Guan Xing":"B","Zhang Yi":"B","Zhang Ni":"B","Wu Yi":"B","Fei Yi":"B","Dong Yun":"B","Jiang Wan":"B","Liu Feng":"B","Meng Huo":"B","Zhu Rong":"B","Cao Pi":"B","Cao Zhi":"B","Cao Zhang":"B","Sima Shi":"B","Sima Zhao":"B","Man Chong":"B","Tian Yu":"B","Wen Ping":"B","Zang Ba":"B","Xu Sheng":"B","Pan Zhang":"B","Jiang Qin":"B","Ling Tong":"B","He Qi":"B","Bu Zhi":"B","Zhang Zhao":"B","Zhang Hong":"B","Kan Ze":"B","Lu Fan":"B","Cao Bao":"C","Han Xuan":"C","Yang Song":"C","Liu Xian":"C","Fu Shiren":"C","Mi Fang":"C","Han Hao":"C","Mi Zhu":"C","Liu Zhang":"C","Liu Biao":"C","Liu Qi":"C","Huang Zu":"C","Cai Mao":"C","Zhang Yun":"C","Chen Deng":"C","Chen Gui":"C","Tao Qian":"C","Kong Rong":"C","Kong Zhou":"C","Han Fu":"C","Liu Dai":"C","Wang Lang":"C","Yan Baihu":"C","Xu Gong":"C","Zhang Lu":"C","Yang Ren":"C","Yang Ang":"C","Hou Cheng":"C","Song Xian":"C","Wei Xu":"C","Li Jue":"C","Guo Si":"C","Fan Chou":"C","Zhang Ji":"C","Ji Ling":"C","Lei Bo":"C","Liu Du":"C","Zhao Fan":"C","Liu Yan":"C","Gongsun Zan":"C"};
 const EDGES=[[0,1],[0,4],[1,2],[1,3],[1,4],[2,3],[2,9],[3,4],[3,7],[3,9],[4,5],[4,6],[4,7],[5,6],[6,7],[7,10],[7,9],[8,9],[8,10],[8,11],[9,10],[10,11],[12,0],[12,4],[13,2],[13,9],[14,10],[14,11],[14,7]];
 function domesticBonuses(c){let trade=1,farm=1,learning=1;for(const name of c.officers||[]){const st=OFFICER_DATA[name]||[55,55,55,55];if(!['S','A'].includes(HERO_TIERS[name]))continue;if(st[2]>=85)trade+=.10;if(st[3]>=85)farm+=.10;if(st[2]>=90&&st[3]>=80)learning+=.10;}return {trade:Math.min(1.4,trade),farm:Math.min(1.4,farm),learning:Math.min(1.4,learning)}}
-// Backlog 1/5: ranking by action-relevant weighted score; governor is intentionally counted twice.
+// v2.6: governor contributes 150% but is EXCLUDED from the officer ranking.
 function rankedStat(c,weights){
- const ranked=(c.officers||[]).map(name=>({name,stats:OFFICER_DATA[name]||[55,55,55,55]}))
-   .map(o=>({...o,score:weights.reduce((v,w,i)=>v+w*o.stats[i],0)}))
-   .sort((a,b)=>b.score-a.score);
- const total=ranked.reduce((v,o,i)=>v+o.score*Math.max(0,1-i*.1),0);
- const governor=(c.officers||[]).includes(c.governor)?c.governor:(c.officers||[])[0];
- const gs=governor?(OFFICER_DATA[governor]||[55,55,55,55]):[0,0,0,0];
- return total+weights.reduce((v,w,i)=>v+w*gs[i],0);
+ const names=(c.officers||[]);
+ const gov=names.includes(c.governor)?c.governor:names[0];
+ const score=name=>weights.reduce((v,w,i)=>v+w*(OFFICER_DATA[name]||[55,55,55,55])[i],0);
+ const regular=names.filter(n=>n!==gov).sort((a,b)=>score(b)-score(a));
+ return regular.reduce((v,n,i)=>v+score(n)*Math.max(0,1-i*.1),0)+(gov?1.5*score(gov):0);
 }
 function officerStat(c,k){return rankedStat(c,[0,1,2,3].map(i=>i===k?1:0))}
 function statFor(c,type){return rankedStat(c,({recruit:[1,0,0,0],food:[0,0,0,1],farm:[0,0,.4,.6],train:[.6,.4,0,0],fort:[0,.6,0,.4],search:[0,0,.6,.4],hire:[0,0,.6,.4],commerce:[0,0,.4,.6],agriculture:[0,0,0,1],manpower:[.4,0,0,.6]})[type]||[0,0,0,0])}
