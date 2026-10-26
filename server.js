@@ -319,6 +319,14 @@ function applyAction(r,side,owner,act){
 
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),code=String(u.searchParams.get('code')||'CAOCAO').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
+ if(req.method==='GET'&&/^\/SFX\/(?:DRILL|RECRUIT|PATROL|TRADE|HARVEST)\.wav$/.test(u.pathname)){
+  const filename=path.basename(u.pathname),file=path.join(__dirname,'SFX',filename);
+  try{
+   const stat=fs.statSync(file);
+   res.writeHead(200,{'Content-Type':'audio/wav','Content-Length':stat.size,'Cache-Control':'public, max-age=3600'});
+   return fs.createReadStream(file).pipe(res);
+  }catch(e){res.writeHead(404);return res.end('SFX not found')}
+ }
  if(req.method==='GET'&&/^\/Music\/backmusic(?:[1-9]|1[0-9]|20)\.mp3$/.test(u.pathname)){
   const filename=path.basename(u.pathname),file=path.join(__dirname,'Music',filename);
   try{const stat=fs.statSync(file);if(!stat.isFile())throw Error('Not a file');
