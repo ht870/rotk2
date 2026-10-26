@@ -301,8 +301,8 @@ function applyAction(r,side,owner,act){
  const pct=act.percent==null?70:Number(act.percent),sent=Math.floor(c.troops*pct/100);
  const gold=act.gold==null?Math.floor(c.gold*.3):Number(act.gold);
  const food=act.food==null?Math.ceil(sent*.03)*8:Number(act.food);
- const heroes=act.heroes??(c.officers||[]).slice(0,3);
- if(!Array.isArray(heroes)||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
+ const heroes=act.heroes;
+ if(!Array.isArray(heroes)||heroes.length<1||heroes.length>3||new Set(heroes).size!==heroes.length||heroes.some(n=>!(c.officers||[]).includes(n)||!apReady(st,n)))throw Error('Selected attacker hero has no AP');
  const result=runBattle(st,id,dst,heroes,pct,gold,food,{attacker:act.tactic||'assault',defender:st.defenseTactics?.[dst]||'fortify'});
  // Any defender who was attacked must receive the full battle report.
  const item=st.battleInbox?.[0];

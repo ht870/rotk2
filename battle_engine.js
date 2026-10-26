@@ -140,7 +140,7 @@ function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,he
  if(!Number.isInteger(percent)||percent<1||percent>100||sent<1000)throw Error('Need at least 1000 troops');
  if(!Number.isInteger(gold)||gold<0||gold>a.gold)throw Error('Invalid expedition gold');
  if(!Number.isInteger(food)||food<Math.ceil(sent*.03)*8||food>a.food)throw Error('Insufficient expedition food');
- if(!Array.isArray(heroes)||heroes.length>3||new Set(heroes).size!==heroes.length||heroes.some(n=>!a.officers.includes(n)))throw Error('Invalid selected heroes');
+ if(!Array.isArray(heroes)||heroes.length<1||heroes.length>3||new Set(heroes).size!==heroes.length||heroes.some(n=>!a.officers.includes(n)))throw Error('Invalid selected heroes');
  const won=simulateBattle(src,dst,heroes,false,{percent,sent,gold,food});
  st.logs=logs;st.captives=captives;st.wandering=wandering;st.battleInbox=battleInbox;st.battleSerial=battleSerial;st.lastBattle=lastBattle;
  return {won,report:lastBattle};
