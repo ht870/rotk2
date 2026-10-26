@@ -1,3 +1,15 @@
+# ROTK v3.0.1 — AI Planner
+
+Run with Node.js 18+: `npm start`. Deploy the entire folder.
+
+Core files: `server.js`, `index.html`, `lobby.html`, `battle_engine.js`, `economy_engine.js`, `game_data.js`.
+
+Run AI smoke test: `node test_ai_v3.js`.
+
+See `CHANGELOG.md` for the concise release history.
+
+**Audio note:** `/Music/backmusic1.mp3` through `/Music/backmusic20.mp3` are referenced by the UI but are not included in the supplied source ZIP. The existing `/assets/Music_04_Siege_at_Red_Cliffs.mp3` asset is retained.
+
 # ROTK Classic — Full GET Actions + Classic Combat (experimental)
 
 Deploy the entire directory contents at the repository root, then restart the Node server (`npm start`). Existing in-memory rooms will reset on redeploy; the patch does not itself call `/api/restart` or reset any room.

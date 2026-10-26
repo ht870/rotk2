@@ -56,6 +56,8 @@ function startNextTurn(r){
 
 const SIDES=['wei','shu','wu'];
 function controllers(r){return r.controllers||{wei:'human',shu:'human',wu:'ai'}}
+// v3.0 AI: deterministic utility planner with legal, server-authoritative actions.
+// It deliberately uses no opponent hidden stances, spy intel, or resource grants.
 function autoAI(r){
  if(!r.started||!r.state||r.state.over||r.aiBusy)return;
  r.aiBusy=true;
@@ -63,78 +65,103 @@ function autoAI(r){
   for(const side of SIDES){
    if(r.controllers[side]!=='ai'||r.ready[side])continue;
    const owner=SIDES.indexOf(side),st=r.state;
-   const own=st.cities.filter(c=>c.owner===owner);
-   const enemyNeighbors=c=>adjacent(c.id).map(i=>st.cities[i]).filter(t=>t.owner!==owner);
-   const front=c=>enemyNeighbors(c).length>0;
-   const power=c=>{
-    const heroes=(c.officers||[]).map(n=>({name:n,tier:tier(n),stats:OFFICER_DATA[n]||[55,55,55,55]}))
-      .sort((a,b)=>(b.tier==='S'?80:b.tier==='A'?35:0)+b.stats[0]+b.stats[1]-(a.tier==='S'?80:a.tier==='A'?35:0)-a.stats[0]-a.stats[1]).slice(0,3);
-    const multiplier=1+heroes.reduce((v,h)=>v+(h.tier==='S'?.26:h.tier==='A'?.12:.035),0);
-    return {heroes:heroes.map(h=>h.name),strength:c.troops*multiplier*(.7+Math.min(100,c.morale||65)/200)};
-   };
-   const run=act=>{try{const message=applyAction(r,side,owner,act);r.log.push({phase:r.phase,side,txt:'AI '+message});return true}catch(e){r.log.push({phase:r.phase,side,txt:'AI skipped '+(act.type||'action')+': '+e.message});return false}};
-   // Free officer movements: concentrate elite officers at the closest threatened front.
-   for(const c of own){
-    if(front(c)||(c.officers||[]).length<2)continue;
-    const neighbors=adjacent(c.id).map(i=>st.cities[i]).filter(t=>t.owner===owner&&front(t));
-    if(!neighbors.length)continue;
-    const elite=(c.officers||[]).filter(n=>['S','A'].includes(tier(n))&&(st.stationCooldown?.[n]||0)<=st.turn).slice(0,3);
-    if(elite.length)run({type:'station',city:c.id,to:neighbors.sort((a,b)=>b.troops-a.troops)[0].id,heroes:elite});
+   const own=()=>st.cities.filter(c=>c.owner===owner);
+   const adjacentCities=c=>adjacent(c.id).map(i=>st.cities[i]);
+   const enemies=c=>adjacentCities(c).filter(x=>x.owner!==owner);
+   const frontline=c=>enemies(c).length>0;
+   const available=c=>(c.officers||[]).filter(n=>apReady(st,n));
+   const stats=n=>OFFICER_DATA[n]||[55,55,55,55];
+   const heroValue=n=>{const x=stats(n);return x[0]*.48+x[1]*.42+x[2]*.08+x[3]*.02+({S:24,A:11,B:3,C:0}[tier(n)]||0)};
+   const bestHeroes=c=>available(c).slice().sort((a,b)=>heroValue(b)-heroValue(a)).slice(0,3);
+   const heroStrength=c=>{const names=(c.officers||[]).slice().sort((a,b)=>heroValue(b)-heroValue(a)).slice(0,3);return 1+names.reduce((sum,n)=>sum+(heroValue(n)-45)/310,0)};
+   const strength=c=>Math.max(0,c.troops)*heroStrength(c)*(.52+Math.max(0,Math.min(100,c.morale||0))*.0075)*(1+Math.min(12000,c.safety||0)/50000);
+   const incoming=c=>enemies(c).reduce((sum,e)=>sum+strength(e),0);
+   const exposure=c=>incoming(c)/Math.max(1,strength(c));
+   const foodNeed=(c,pct)=>Math.ceil(Math.floor(c.troops*pct/100)*.03)*8;
+   const run=act=>{try{const message=applyAction(r,side,owner,act);r.log.push({phase:r.phase,side,txt:'AI '+message});return true}catch(e){r.log.push({phase:r.phase,side,txt:'AI skipped '+act.type+': '+e.message});return false}};
+   const treasuryGold=()=>treasury(st,owner);
+   // Set defensive posture for free, based on exposed troop ratios; do not reveal enemy stances.
+   for(const c of own().filter(frontline)){
+    const risk=exposure(c),stance=risk>1.2?'fortify':risk<.55&&c.morale<65?'counter':'hold';
+    if((st.defenseTactics?.[c.id]||'fortify')!==stance)run({type:'defense-tactic',city:c.id,tactic:stance});
    }
-   // Rear-area reinforcements. Avoid draining every city to zero.
-   for(const c of own.filter(c=>!c.used&&!front(c)).sort((a,b)=>b.troops-a.troops)){
-    const dest=adjacent(c.id).map(i=>st.cities[i]).filter(t=>t.owner===owner&&front(t))
-      .sort((a,b)=>a.troops-b.troops)[0];
-    if(dest&&c.troops>3800&&c.troops>dest.troops*.7)run({type:'move',city:c.id,to:dest.id});
+   // Reposition officers before planning battles; preserve AP for frontline attackers.
+   for(const c of own().filter(c=>!frontline(c)&&available(c).length>1)){
+    const targets=adjacentCities(c).filter(t=>t.owner===owner&&frontline(t));
+    targets.sort((a,b)=>exposure(b)-exposure(a));
+    const t=targets[0];if(!t)continue;
+    const heroes=available(c).filter(n=>['S','A'].includes(tier(n))&&(st.moveCD?.[n]||0)===0).sort((a,b)=>heroValue(b)-heroValue(a)).slice(0,Math.max(0,3-(t.officers||[]).length));
+    if(heroes.length)run({type:'station',city:c.id,to:t.id,heroes});
    }
-   // Prioritize battles by combat-capability, garrison quality and available food.
-   const plans=[];
-   for(const c of own.filter(c=>front(c))){
-    const attack=power(c);
-    for(const t of enemyNeighbors(c)){
-     const defense=power(t);
-     const ratio=attack.strength/Math.max(1,defense.strength);
-     const deploy=Math.min(90,Math.max(60,Math.round(75+Math.min(15,(ratio-1)*12))));
-     const sent=Math.floor(c.troops*deploy/100);
-     const food=Math.ceil(sent*.03)*8;
-     const score=ratio+(t.troops<2500?.35:0)+(t.food<300?.12:0)-(c.food<food?10:0);
-     plans.push({c,t,ratio,score,deploy,food,heroes:attack.heroes});
+   // Reinforce fronts with troop transfers. One city action per donor, no free troops.
+   const donors=own().filter(c=>!c.used&&c.troops>3500).sort((a,b)=>b.troops-a.troops);
+   for(const c of donors){
+    const targets=adjacentCities(c).filter(t=>t.owner===owner&&frontline(t));
+    targets.sort((a,b)=>(exposure(b)*2+incoming(b)/15000)-(exposure(a)*2+incoming(a)/15000));
+    const t=targets[0];if(!t)continue;
+    const reserve=frontline(c)?Math.max(2800,incoming(c)*.8):1800;
+    if(c.troops*.5<reserve||c.troops< t.troops*.65)continue;
+    run({type:'move',city:c.id,to:t.id});
+   }
+   // Compare ALL adjacent battles by expected strategic value and risk, then re-plan after each action.
+   // Hard guard against suicide attacks, and protect a reserve when the origin has multiple threats.
+   const attacked=new Set();
+   for(let iteration=0;iteration<st.cities.length;iteration++){
+    const plans=[];
+    for(const c of own().filter(c=>frontline(c)&&!c.used&&c.troops>=2300&&c.morale>=42)){
+     const heroes=bestHeroes(c),heroFactor=1+heroes.reduce((v,n)=>v+(heroValue(n)-45)/310,0);
+     for(const t of enemies(c)){
+      if(attacked.has(c.id+':'+t.id))continue;
+      const enemySupport=adjacentCities(t).filter(x=>x.owner===t.owner&&x.id!==t.id).reduce((v,x)=>v+strength(x),0);
+      const originThreat=enemies(c).filter(x=>x.id!==t.id).reduce((v,x)=>v+strength(x),0);
+      for(const pct of [65,80,90]){
+       const sent=Math.floor(c.troops*pct/100),food=foodNeed(c,pct);
+       if(sent<1500||c.food<food||c.troops-sent<Math.min(1500,originThreat*.22))continue;
+       const attack=sent*heroFactor*(.52+Math.min(100,c.morale)*.0075);
+       const defense=strength(t);
+       const ratio=attack/Math.max(1,defense);
+       if(ratio<1.32)continue;
+       const value=1.5+Math.min(2,(t.gold+t.food*.18)/11000)+(t.troops<2500?.45:0);
+       const safety=Math.min(2,ratio-1.0);
+       const risk=Math.max(0,originThreat/Math.max(1,(c.troops-sent)*heroFactor)-.65);
+       const score=value*1.2+safety*2.2-risk*1.4-enemySupport/110000-(pct===90?.12:0);
+       plans.push({c,t,pct,food,heroes,score,ratio});
+      }
+     }
+    }
+    plans.sort((a,b)=>b.score-a.score);
+    const p=plans[0];if(!p||p.score<2.0)break;
+    attacked.add(p.c.id+':'+p.t.id);
+    if(!run({type:'attack',city:p.c.id,to:p.t.id,percent:p.pct,food:p.food,heroes:p.heroes,tactic:p.ratio>1.8?'assault':'siege'}))continue;
+    if(st.over)break;
+   }
+   // Development utility: choose the most urgent LEGAL city action, not a fixed if/else ladder.
+   for(const c of own().filter(c=>!c.used)){
+    if(!available(c).length)continue;
+    const risk=exposure(c),border=frontline(c),harvestReady=(st.harvestCooldown?.[c.id]||0)<=st.turn;
+    const choices=[];
+    const add=(type,score,ok=true)=>{if(ok)choices.push({type,score})};
+    const foodTurns=c.food/Math.max(1,c.troops*.08);
+    add('food',foodTurns<2?12:foodTurns<4?8:foodTurns<8?4:0,harvestReady);
+    add('recruit',border?(risk>.85?10:7):3,c.gold>=130&&c.pool>=250&&c.troops<(border?21000:11000));
+    add('train',border?(c.morale<45?11:c.morale<65?8:c.morale<80?4:1):c.morale<55?5:1,c.gold>=90);
+    add('fort',border&&risk>.9?7:1,c.gold>=100&&c.safety<15000);
+    add('farm',c.gold<300?9:c.gold<800?5:2);
+    choices.sort((a,b)=>b.score-a.score);
+    if(choices.length)run({type:choices[0].type,city:c.id});
+   }
+   // Spend surplus treasury on officer acquisition; never inspect undiscovered wandering officers.
+   if(treasuryGold()>1100){
+    for(const c of own().slice().sort((a,b)=>b.gold-a.gold)){
+     const found=(st.discovered?.[c.id]||[]).slice().sort((a,b)=>heroValue(b)-heroValue(a));
+     for(const name of found.slice(0,2))if(treasuryGold()>550&&available(c).length)run({type:'hire',city:c.id,name});
+    }
+    // Searches use genuine AP, gold, RNG and existing search limits.
+    for(const c of own().filter(c=>available(c).length&&treasuryGold()>1500).slice(0,2)){
+     if((st.searchCount?.[c.id]||0)<1)run({type:'search',city:c.id});
     }
    }
-   plans.sort((a,b)=>b.score-a.score);
-   for(const p of plans){
-    if(p.c.owner!==owner||p.t.owner===owner)continue;
-    // The original 1.45 raw-troop threshold made AI passive against elite armies.
-    // Elite-adjusted strength permits calculated attacks but not obvious suicide missions.
-    if(p.ratio>=1.20&&p.c.troops>=2100&&p.c.food>=p.food&&p.c.morale>=48){
-     run({type:'attack',city:p.c.id,to:p.t.id,percent:p.deploy,food:p.food,heroes:p.heroes});
-    }
-   }
-   // Development after offensives, favor frontline sustainability and army concentration.
-   for(const c of own){
-    if(c.used||c.owner!==owner)continue;
-    const threatened=front(c),canHarvest=(st.harvestCooldown?.[c.id]||0)<=st.turn;
-    let act;
-    if(c.food<Math.max(1500,c.troops*(threatened?.85:.50))&&canHarvest)act={type:'food',city:c.id};
-    else if(threatened&&c.pool>=450&&c.gold>=130&&c.troops<20000)act={type:'recruit',city:c.id};
-    else if(threatened&&c.morale<70&&c.gold>=90)act={type:'train',city:c.id};
-    else if(!threatened&&c.pool>=1000&&c.gold>=300&&c.troops<7000)act={type:'recruit',city:c.id};
-    else if(c.gold<600)act={type:'farm',city:c.id};
-    else if(canHarvest&&c.food<c.troops*1.3)act={type:'food',city:c.id};
-    else act={type:'farm',city:c.id};
-    run(act);
-   }
-   // Scout multiple prosperous cities; prioritize discovered S/A officers.
-   if(treasury(st,owner)>1200){
-    const citiesToSearch=own.slice().sort((a,b)=>(b.gold+(front(b)?100:0))-(a.gold+(front(a)?100:0))).slice(0,3);
-    for(const c of citiesToSearch){
-     if(treasury(st,owner)<800)break;
-     if((st.searchCount?.[c.id]||0)<3)run({type:'search',city:c.id});
-     const found=(st.discovered?.[c.id]||[]).slice().sort((a,b)=>({S:4,A:3,B:2,C:1}[tier(b)]-({S:4,A:3,B:2,C:1}[tier(a)])));
-     for(const name of found.slice(0,2))if(treasury(st,owner)>700)run({type:'hire',city:c.id,name});
-    }
-   }
-   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI turn complete'});
+   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v3 planning complete'});
   }
  }finally{r.aiBusy=false}
  if(SIDES.every(side=>r.ready[side]))startNextTurn(r);
