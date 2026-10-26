@@ -246,7 +246,7 @@ body.city-open #cityPanel{display:block}
 .battleline:has(.treasure-info-grid){display:block}
 .battleline:has(.treasure-info-grid)>span{display:block;margin-bottom:10px}
 .battleline:has(.treasure-info-grid)>b{display:block;font-weight:normal}
-</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.3 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Peta isometric Three Kingdoms"></svg></div><div class="maptools"><button id="zoomOut">−</button><span>Drag map · Pinch / Zoom</span><button id="zoomIn">+</button><button id="resetMap">Reset</button></div><div class="legend"><span><i class="dot" style="background:#3b82f6"></i>Wei</span><span><i class="dot" style="background:#22c55e"></i>Shu (Kamu)</span><span><i class="dot" style="background:#ef4444"></i>Wu</span></div><p class="tip">Diminishing returns berdasarkan ranking tiap stat. LDR membangun POOL, WAR membangun SAFETY, INT membangun COMMERCE, POL membangun HARVEST setiap turn. Kota menghasilkan 0.5% gold dan 1% food pasif. Satu aksi per kota per turn. Hero bisa tertangkap atau kabur.</p><button id="restart">New Game</button> <button id="encyclopedia">📜 Hero Encyclopedia</button> <button id="inventoryButton">🎒 Inventory</button> <button id="sound">🔊 Sound ON</button> <button id="bgm">♫ Music ON</button> <button id="end" style="background:#795b29">End Turn ▶</button></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Pilih kota</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="train">Drill</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="governor">🏛 Appoint Governor</button></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
+</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.3.5 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Peta isometric Three Kingdoms"></svg></div><div class="maptools"><button id="zoomOut">−</button><span>Drag map · Pinch / Zoom</span><button id="zoomIn">+</button><button id="resetMap">Reset</button></div><div class="legend"><span><i class="dot" style="background:#3b82f6"></i>Wei</span><span><i class="dot" style="background:#22c55e"></i>Shu (Kamu)</span><span><i class="dot" style="background:#ef4444"></i>Wu</span></div><p class="tip">Diminishing returns berdasarkan ranking tiap stat. LDR membangun POOL, WAR membangun SAFETY, INT membangun COMMERCE, POL membangun HARVEST setiap turn. Kota menghasilkan 0.5% gold dan 1% food pasif. Satu aksi per kota per turn. Hero bisa tertangkap atau kabur.</p><button id="restart">New Game</button> <button id="encyclopedia">📜 Hero Encyclopedia</button> <button id="inventoryButton">🎒 Inventory</button> <button id="sound">🔊 Sound ON</button> <button id="bgm">♫ Music ON</button> <button id="end" style="background:#795b29">End Turn ▶</button></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Pilih kota</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="train">Drill</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="governor">🏛 Appoint Governor</button></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
 <div id="audioControls"><label>🔊 SFX <input id="sfxSlider" type="range" min="0" max="100" value="90" aria-label="SFX volume"></label><label>♫ Music <input id="musicSlider" type="range" min="0" max="100" value="50" aria-label="Music volume"></label></div><button id="inboxButton" title="Battle Inbox">✉ Inbox <span class="unread" id="inboxUnread"></span></button><div id="battleOverlay"><div id="battleBox"><h2 id="battleTitle"></h2><div id="battleBody"></div><div id="battleButtons" class="battlebuttons"></div></div></div><script src="/economy_engine.js"></script><script src="/treasure_engine.js"></script><script>
 (()=>{'use strict';
 const defs=[
@@ -376,12 +376,11 @@ function showMarket(){
 function tone(freq,duration=.13,type='sine',gain=.075,delay=0){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(Math.min(.22,gain*(gain<=.024?musicVolume:sfxVolume)),t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02)}catch(e){}}
 let musicOn=true,musicTimer=null,musicStep=0;
 const BGM_COUNT=20;
-const classicBgm=new Audio('/Music/backmusic1.mp3');
-classicBgm.loop=true;
+let bgmTrack=1+Math.floor(Math.random()*BGM_COUNT);
+const classicBgm=new Audio('/Music/backmusic'+bgmTrack+'.mp3');
+classicBgm.loop=false;
 classicBgm.preload='auto';
 classicBgm.playsInline=true;
-let bgmTrack=1, bgmNextTurn=null, bgmLastObservedTurn=null;
-const bgmRandomDelay=()=>3+Math.floor(Math.random()*3); // 3, 4, or 5 turns
 function bgmPickDifferentTrack(){
  let next=1+Math.floor(Math.random()*(BGM_COUNT-1));
  if(next>=bgmTrack)next++;
@@ -389,27 +388,19 @@ function bgmPickDifferentTrack(){
 }
 function updateClassicMusicVolume(){classicBgm.volume=soundOn&&musicOn?Math.min(1,musicVolume):0}
 function musicStatus(message){const b=$('bgm');if(b)b.title=message}
-classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
-classicBgm.addEventListener('playing',()=>musicStatus('Playing backmusic'+bgmTrack+'.mp3; next change at turn '+bgmNextTurn));
-function bgmObserveTurn(currentTurn){
- const t=Number(currentTurn);
- if(!Number.isFinite(t)||t<1)return;
- if(bgmLastObservedTurn===null||t<bgmLastObservedTurn){
-  bgmLastObservedTurn=t;
-  bgmNextTurn=t+bgmRandomDelay();
-  return;
- }
- if(t<=bgmLastObservedTurn)return;
- bgmLastObservedTurn=t;
- if(t<bgmNextTurn)return;
+function bgmPlayNext(){
+ if(!musicOn||!soundOn)return;
  bgmTrack=bgmPickDifferentTrack();
- bgmNextTurn=t+bgmRandomDelay();
  classicBgm.src='/Music/backmusic'+bgmTrack+'.mp3';
  classicBgm.load();
- if(musicOn&&soundOn)classicBgm.play().catch(e=>musicStatus('Playback blocked: '+e.message));
- musicStatus('Changed to backmusic'+bgmTrack+'.mp3; next change at turn '+bgmNextTurn);
+ updateClassicMusicVolume();
+ classicBgm.play().catch(e=>musicStatus('Playback blocked: '+e.message));
 }
-function musicTick(){} // BGM is driven by the shared turn counter, not elapsed time.
+classicBgm.addEventListener('ended',bgmPlayNext);
+classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
+classicBgm.addEventListener('playing',()=>musicStatus('Playing backmusic'+bgmTrack+'.mp3'));
+function bgmObserveTurn(currentTurn){} // Playback is independent of game turns.
+function musicTick(){}
 async function toggleMusic(){
  musicOn=!musicOn;updateClassicMusicVolume();$('bgm').textContent=musicOn?'♫ Music ON':'♫ Music OFF';
  if(!musicOn){classicBgm.pause();musicStatus('Music paused');return}
@@ -419,14 +410,14 @@ async function toggleMusic(){
 const ACTION_SFX_FILES={farm:'TRADE',food:'HARVEST',recruit:'RECRUIT',train:'DRILL',fort:'PATROL'};
 const actionSoundCache={};
 for(const [action,file] of Object.entries(ACTION_SFX_FILES)){
- const a=new Audio('/SFX/'+file+'.wav');a.preload='auto';actionSoundCache[action]=a;
+ const a=new Audio('/SFX/'+file+'.wav?v=30pct-original-v2');a.preload='auto';actionSoundCache[action]=a;
 }
 function playActionSound(action){
  if(!soundOn)return;
  const sample=actionSoundCache[action];
  if(!sample)return;
  // Clone allows repeated rapid actions to overlap without interrupting.
- const a=sample.cloneNode();a.volume=Math.min(1,Math.max(0,sfxVolume));
+ const a=sample.cloneNode();const actionGain=(action==='food'||action==='fort')?0.30:1.0;a.volume=Math.min(1,Math.max(0,sfxVolume*actionGain));
  a.play().catch(()=>{});
 }
 function sfx(name){
