@@ -5,6 +5,7 @@ const lobbyHtml=fs.readFileSync(path.join(__dirname,'lobby.html'));
 const crypto=require('crypto');
 const rooms=new Map(),PORT=process.env.PORT||3000;
 const {runBattle}=require('./battle_engine');
+const TREASURE=require('./treasure_engine');
 const ROTK_ECONOMY=require('./economy_engine');
 function reply(res,status,obj){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 function read(req){return new Promise((ok,no)=>{let s='';req.on('data',d=>{s+=d;if(s.length>3000000){req.destroy();no(Error('Too large'))}});req.on('end',()=>{try{ok(JSON.parse(s||'{}'))}catch(e){no(e)}})})}
@@ -25,6 +26,7 @@ function moveWanderers(st){if(!st.wandering)return;for(const [name,id] of Object
 function startNextTurn(r){
  if(r.stopped||!r.state||r.state.over)return;
  const st=r.state;
+ activeTreasureState=st;TREASURE.ensure(st);
  syncVictory(st);if(st.over)return;
  st.turn=(Number(st.turn)||1)+1;
  st.searchCount={};st.heroAP={};st.stationCooldown??={};for(const n of Object.keys(st.stationCooldown))if(st.stationCooldown[n]>0)st.stationCooldown[n]--;st.moveCD??={};for(const n of Object.keys(st.moveCD))if(st.moveCD[n]>0)st.moveCD[n]--;moveWanderers(st);st.heroAP={};for(const [n,v] of Object.entries(st.moveCD||{}))st.moveCD[n]=Math.max(0,v-1);for(const [id,effects] of Object.entries(st.spyEffects||{})){for(const [key,entry] of Object.entries(effects)){if(entry.until<st.turn)delete effects[key]}}
@@ -173,7 +175,7 @@ function advance(r){
  if(r.started&&r.deadline&&Date.now()>=r.deadline){autoAI(r);startNextTurn(r);}
 }
 setInterval(()=>{for(const r of rooms.values())advance(r)},500).unref();
-function view(r){if(r.state)syncVictory(r.state);advance(r);return {stopped:!!r.stopped,version:r.version,phase:r.phase,deadline:r.deadline,mode:r.mode,ready:r.ready,pendingTurn:r.pendingTurn,state:r.state,log:r.log.slice(-25)}}
+function view(r){if(r.state)TREASURE.ensure(r.state);if(r.state)syncVictory(r.state);advance(r);return {stopped:!!r.stopped,version:r.version,phase:r.phase,deadline:r.deadline,mode:r.mode,ready:r.ready,pendingTurn:r.pendingTurn,state:r.state,log:r.log.slice(-25)}}
 // Extracted from the bundled classic client for parity of officer stats and adjacency.
 const OFFICER_DATA={
 'Liu Bei':[84,73,78,82],'Guan Yu':[95,97,76,54],'Zhang Fei':[89,98,35,25],'Zhao Yun':[94,96,78,65],'Zhuge Liang':[96,38,100,98],'Ma Chao':[88,97,43,27],'Huang Zhong':[86,93,62,43],'Pang Tong':[84,40,97,82],
@@ -189,10 +191,11 @@ const HERO_TIERS={"Guan Yu":"S","Zhang Fei":"S","Zhao Yun":"S","Ma Chao":"S","Hu
 const EDGES=[[0,1],[0,4],[1,2],[1,3],[1,4],[2,3],[2,9],[3,4],[3,7],[3,9],[4,5],[4,6],[4,7],[5,6],[6,7],[7,10],[7,9],[8,9],[8,10],[8,11],[9,10],[10,11],[12,0],[12,4],[13,2],[13,9],[14,10],[14,11],[14,7]];
 function domesticBonuses(c){let trade=1,farm=1,learning=1;for(const name of c.officers||[]){const st=OFFICER_DATA[name]||[55,55,55,55];if(!['S','A'].includes(HERO_TIERS[name]))continue;if(st[2]>=85)trade+=.10;if(st[3]>=85)farm+=.10;if(st[2]>=90&&st[3]>=80)learning+=.10;}return {trade:Math.min(1.4,trade),farm:Math.min(1.4,farm),learning:Math.min(1.4,learning)}}
 // v2.6: governor contributes 150% but is EXCLUDED from the officer ranking.
+let activeTreasureState=null;
 function rankedStat(c,weights){
  const names=(c.officers||[]);
  const gov=names.includes(c.governor)?c.governor:names[0];
- const score=name=>weights.reduce((v,w,i)=>v+w*(OFFICER_DATA[name]||[55,55,55,55])[i],0);
+ const score=name=>weights.reduce((v,w,i)=>v+w*TREASURE.stats(activeTreasureState||{cities:[]},name,OFFICER_DATA[name]||[55,55,55,55])[i],0);
  const regular=names.filter(n=>n!==gov).sort((a,b)=>score(b)-score(a));
  return regular.reduce((v,n,i)=>v+score(n)*Math.max(0,1-i*.1),0)+(gov?1.5*score(gov):0);
 }
@@ -221,7 +224,7 @@ function spyPreview(st,owner,city,to,hero,operation){
  return {operation,hero,city:src.id,to:target.id,successRate:Math.max(5,Math.min(90,op.base+.05*(spy-def))),goldCost:op.cost,apAvailable:apReady(st,hero)};
 }
 function applyAction(r,side,owner,act){
- const st=r.state,type=act.type,id=Number(act.city??act.from),c=st.cities[id];
+ const st=r.state;TREASURE.ensure(st);activeTreasureState=st;const type=act.type,id=Number(act.city??act.from),c=st.cities[id];
  if(!Number.isInteger(id)||!c||c.owner!==owner)throw Error('Invalid or unowned city');
  const special=['search','hire','station','attack','governor','spy','defense-tactic'];
  const heroAction=['farm','food','recruit','fort','train','search','hire'].includes(type);const activeHero=heroAction?(c.officers||[]).find(n=>apReady(st,n)):null;if(heroAction&&!activeHero)throw Error('No hero AP available for '+type);
@@ -242,8 +245,9 @@ function applyAction(r,side,owner,act){
   const found=[];const bonus=.4*(1-1/actionMultiplier(c,'search'))/(1-1/3);
   const chance=Math.min(1,Math.random()*.6+bonus);
   for(const [name] of candidates)if(Math.random()<chance){(st.discovered[id]??=[]).push(name);found.push(name);priceFor(st,name,id)}
-  msg=c.name+' Search #'+st.searchCount[id]+' ('+cost+' gold, '+Math.round(chance*100)+'%): '+(found.length?'found '+found.join(', '):'no officers found');
+  const treasure=TREASURE.discover(st,owner);msg=c.name+' Search #'+st.searchCount[id]+' ('+cost+' gold, '+Math.round(chance*100)+'%): '+(found.length?'found '+found.join(', '):'no officers found')+(treasure?' + TREASURE '+treasure.name:'');
  }
+ else if(type==='give_item'){const result=TREASURE.give_item(st,owner,act.hero,act.item);msg=result.accepted?'GIVE '+TREASURE.BY_ID[act.item].name+' → '+act.hero+(result.swapped?' (swapped '+TREASURE.BY_ID[result.swapped].name+')':''):'GIVE rejected: '+result.reason;}
  else if(type==='hire'){
   const name=act.name;if(!name||!OFFICER_DATA[name])throw Error('Unknown hero');
   const captured=st.captives?.[name]===owner;
@@ -261,7 +265,7 @@ function applyAction(r,side,owner,act){
   c.governor=name;msg=name+' appointed governor of '+c.name;
  }
  else if(type==='defense-tactic'){
-  const tactic=act.tactic;if(!['hold','fortify','counter'].includes(tactic))throw Error('Invalid defense tactic');
+  const tactic=act.tactic;if(!['hold','fortify','counter','taunt'].includes(tactic))throw Error('Invalid defense tactic');
   st.defenseTactics??={};st.defenseTactics[id]=tactic;msg=c.name+' defense stance: '+tactic;
  }
  else if(type==='spy'){
@@ -324,6 +328,7 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='GET'&&u.pathname==='/assets/Music_04_Siege_at_Red_Cliffs.mp3'){res.writeHead(200,{'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=86400'});return fs.createReadStream(path.join(__dirname,'Music_04_Siege_at_Red_Cliffs.mp3')).pipe(res)}
  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/lobby')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(lobbyHtml)}
+ if(req.method==='GET'&&u.pathname==='/treasure_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'treasure_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/economy_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'economy_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/classic'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}
  if(req.method==='POST'&&u.pathname==='/api/lobby/create'){
@@ -401,7 +406,7 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='GET'&&u.pathname==='/api/action'){let r=room(code),q=u.searchParams;if(!r)return reply(res,404,{error:'Room not found'});requirePlayer(r,q.get('side'),q.get('token'));advance(r);if(r.stopped||r.pendingTurn||!r.state)return reply(res,409,{error:'Room not active or awaiting turn transition'});let side=q.get('side'),owner=SIDES.indexOf(side);if(owner<0)return reply(res,400,{error:'Invalid side'});if(r.ready[side])return reply(res,409,{error:'Side already ended turn'});
  const v=q.get('version');if(v!==null&&Number(v)!==r.version)return reply(res,409,{error:'Version mismatch',currentVersion:r.version});
- const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
+ const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic'),item:q.get('item')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
  if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){
@@ -413,7 +418,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;r.deadline=Date.now()+r.mode*1000;}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;r.deadline=Date.now()+r.mode*1000;}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');r.ready[b.side]=true;r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});

@@ -1,3 +1,5 @@
+# ROTK v3.2 — Inventory & Treasure System
+
 # ROTK v3.0.1 — AI Planner
 
 Run with Node.js 18+: `npm start`. Deploy the entire folder.
@@ -74,3 +76,9 @@ The built-in AI now considers adjacent enemies, numerical attack odds, food, rec
 - AI now evaluates S/A hero combat strength, uses 8-round food budgets, prioritizes attacks, moves rear troops and elite officers to adjacent fronts, and searches several cities for heroes. It still uses heuristic combat estimates, not perfect battle simulation.
 - Mac music: explicit Music button playback with visible blocked/error state and audio element diagnostics. Safari and Chrome require a user click before playing sound. Check `/assets/Music_04_Siege_at_Red_Cliffs.mp3` returns HTTP 200, and the tab/site is not muted.
 - No existing live room is modified by packaging this ZIP; deploying restarts in-memory rooms. Test in a new room.
+
+## v3.2 Treasure
+
+Shared `treasure_engine.js` exports `give_item(st,owner,hero,id)`, `discover`, `dropAndLoot`, `stats`, and inventory helpers. Both manual GIVE and automatic war loot call the same `give_item` function. SEARCH has a separate 10% treasure roll with S/A/B/C weights 5/15/30/50. Treasure is unique per world; weapon slot limit 1, books stack; all equipment contributes to effective combat stats including TAUNT and DUEL. Defeated participants drop equipped items regardless of capture; winner tries up to three distinct random participating officers, then stores rejected loot in faction inventory.
+
+Browser UI: **🎒 Inventory** for faction items and GIVE. Online server action: `/api/action?code=...&side=...&token=...&type=give_item&city=...&hero=...&item=...`. Server state includes `inventory`, `equipment`, `foundTreasures`. Run `node test_treasure_v32.js`.

@@ -14,3 +14,13 @@
 - Additive base ATK/DEF modifiers; hero damage multipliers retained.
 
 Older detailed release notes are intentionally excluded from the deployment package.
+
+## v3.1 — TAUNT & DUEL
+- New TAUNT attacker and defender tactics. Each TAUNT rolls independently per round (up to 8 rounds).
+- TAUNT success = clamp(10 + average INT of active challengers − average INT of active targets + opposing tactic modifier, 0, 30) percent.
+- Opposing HOLD / AMBUSH: −10%; FORTIFY / SIEGE: −5%.
+- Successful TAUNT: highest-WAR active challenger duels uniformly random active enemy officer.
+- Duel power = 0.90 WAR + 0.05 INT + 0.05 LDR. Win chance = clamp(50 + 50 × power difference / 9, 0, 100) percent.
+- Duel loser withdraws from this battle, immediately losing combat effects. Losing side morale −10.
+- Strategy adjustments: HOLD DEF +18%; AMBUSH enemy morale −7; other effects unchanged.
+- TAUNT/DUEL implemented in both multiplayer server engine and standalone classic client.

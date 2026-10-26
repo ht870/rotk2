@@ -1,0 +1,22 @@
+/* ROTK 3.2 shared treasure rules; same give_item() for manual GIVE and war loot. */
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;root.ROTK_TREASURE=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
+'use strict';
+const STATS=['LDR','WAR','INT','POL'];
+const ITEMS=[
+ ['green_dragon','Green Dragon Crescent Blade','weapon','S',[0,20,0,0]],['sky_piercer','Sky Piercer Halberd','weapon','S',[0,22,0,0]],['serpent_spear','Zhangba Serpent Spear','weapon','S',[0,19,0,0]],['seven_star','Seven Star Sword','weapon','A',[0,15,0,0]],['qilin_bow','Qilin Bow','weapon','A',[0,13,0,0]],['steel_spear','Steel Spear','weapon','B',[0,9,0,0]],['iron_sword','Iron Sword','weapon','C',[0,5,0,0]],['bronze_saber','Bronze Saber','weapon','C',[0,4,0,0]],
+ ['art_of_war','Art of War','book','S',[12,0,15,0]],['six_secret','Six Secret Teachings','book','A',[10,0,10,0]],['thirty_six','Thirty-Six Stratagems','book','A',[0,0,14,0]],['mengde','Mengde New Book','book','B',[5,0,9,0]],['governance','Records of Governance','book','B',[0,0,3,10]],['agriculture','Agricultural Treatise','book','C',[0,0,0,6]],['military_notes','Military Notes','book','C',[4,0,3,0]],['scholars_scroll','Scholar Scroll','book','C',[0,0,5,2]]
+].map(([id,name,type,rarity,bonus])=>({id,name,type,rarity,bonus}));
+const BY_ID=Object.fromEntries(ITEMS.map(x=>[x.id,x]));
+function ensure(st){st.inventory??={0:[],1:[],2:[]};st.equipment??={};st.foundTreasures??=[];for(let i=0;i<3;i++)st.inventory[i]??=[];return st}
+function stats(st,name,base){ensure(st);const a=(base||[55,55,55,55]).slice();for(const id of st.equipment[name]||[]){const item=BY_ID[id];if(item)item.bonus.forEach((v,i)=>a[i]+=v)}return a}
+function ownerOf(st,hero){return st.cities.find(c=>(c.officers||[]).includes(hero))?.owner}
+function location(st,id){ensure(st);for(let o=0;o<3;o++)if(st.inventory[o].includes(id))return {owner:o,kind:'inventory'};for(const [hero,ids] of Object.entries(st.equipment))if(ids.includes(id))return {owner:ownerOf(st,hero),kind:'equipment',hero};return null}
+// Returns accepted=false without mutating anything when a weaker/equal weapon is offered.
+function give_item(st,owner,hero,id){ensure(st);const item=BY_ID[id];if(!item)throw Error('Unknown treasure');if(ownerOf(st,hero)!==owner)throw Error('Hero is not in this faction');const loc=location(st,id);if(!loc||loc.owner!==owner)throw Error('Treasure is not owned by faction');if(loc.kind==='equipment'&&loc.hero===hero)return {accepted:true,hero,item:id,already:true};const equip=st.equipment[hero]||[];const oldId=item.type==='weapon'?equip.find(x=>BY_ID[x]?.type==='weapon'):null;if(oldId&&BY_ID[oldId].bonus[1]>=item.bonus[1])return {accepted:false,hero,item:id,reason:'Weapon not stronger'};
+if(loc.kind==='inventory')st.inventory[owner].splice(st.inventory[owner].indexOf(id),1);else st.equipment[loc.hero].splice(st.equipment[loc.hero].indexOf(id),1);
+if(oldId){equip.splice(equip.indexOf(oldId),1);st.inventory[owner].push(oldId)}(st.equipment[hero]??=[]).push(id);return {accepted:true,hero,item:id,swapped:oldId||null}}
+function acquire(st,owner,id){ensure(st);if(!BY_ID[id]||location(st,id))return false;st.inventory[owner].push(id);if(!st.foundTreasures.includes(id))st.foundTreasures.push(id);return true}
+function discover(st,owner,rng=Math.random){ensure(st);if(rng()>=.10)return null;const r=rng(),rarity=r<.05?'S':r<.20?'A':r<.50?'B':'C';const pool=ITEMS.filter(x=>x.rarity===rarity&&!location(st,x.id));if(!pool.length)return null;const item=pool[Math.floor(rng()*pool.length)];return acquire(st,owner,item.id)?item:null}
+function dropAndLoot(st,losingHeroes,winner,participants,rng=Math.random){ensure(st);const acquired=[];const captured=[];for(const hero of [...new Set(losingHeroes)]){const equipped=[...(st.equipment[hero]||[])];for(const id of equipped){st.equipment[hero].splice(st.equipment[hero].indexOf(id),1);st.inventory[winner].push(id);const pool=[...new Set(participants)].filter(n=>ownerOf(st,n)===winner);for(let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}let result=null;for(const recipient of pool.slice(0,3)){result=give_item(st,winner,recipient,id);if(result.accepted)break}acquired.push({id,from:hero,to:result?.accepted?result.hero:null,swapped:result?.swapped||null})}}return acquired}
+return {ITEMS,BY_ID,STATS,ensure,stats,ownerOf,location,give_item,acquire,discover,dropAndLoot};
+});

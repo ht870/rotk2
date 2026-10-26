@@ -1,0 +1,10 @@
+const assert=require('assert');const t=require('./treasure_engine');
+const st={cities:[{owner:1,officers:['Guan Yu','Zhao Yun','Zhang Fei']},{owner:0,officers:['Cao Cao']}]};
+t.ensure(st);assert(t.acquire(st,1,'iron_sword'));assert(t.give_item(st,1,'Guan Yu','iron_sword').accepted);assert.equal(t.stats(st,'Guan Yu',[95,97,76,54])[1],102);
+assert(t.acquire(st,1,'steel_spear'));assert.equal(t.give_item(st,1,'Guan Yu','steel_spear').swapped,'iron_sword');assert(st.inventory[1].includes('iron_sword'));
+assert(t.acquire(st,1,'bronze_saber'));assert(!t.give_item(st,1,'Guan Yu','bronze_saber').accepted);
+assert(t.acquire(st,1,'art_of_war'));assert(t.give_item(st,1,'Guan Yu','art_of_war').accepted);assert.equal(t.stats(st,'Guan Yu',[95,97,76,54])[2],91);
+assert(t.acquire(st,1,'six_secret'));assert(t.give_item(st,1,'Guan Yu','six_secret').accepted);assert.equal(t.stats(st,'Guan Yu',[95,97,76,54])[0],117);
+const loot=t.dropAndLoot(st,['Guan Yu'],0,['Cao Cao'],()=>0);assert.equal(loot.length,3);assert.equal(st.equipment['Guan Yu'].length,0);assert.equal(st.inventory[0].length,0);assert.equal(st.equipment['Cao Cao'].length,3);assert.equal(t.location(st,'steel_spear').owner,0);
+assert.equal(t.acquire(st,1,'steel_spear'),false);assert.equal(t.discover(st,1,()=>.99),null);
+console.log('PASS: v3.2 treasure uniqueness, GIVE, weapon swap/rejection, book stack, stats >100, loot reuse');
