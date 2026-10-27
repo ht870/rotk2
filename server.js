@@ -21,7 +21,7 @@ function token(){return crypto.randomBytes(18).toString('hex')}
 function lobbyView(r,code){return {ok:true,code,started:!!r.started,stopped:!!r.stopped,version:r.version,mode:r.mode,accumulated:!!r.accumulated,slots:Object.fromEntries(SIDES.map(s=>[s,{kind:r.slots[s].kind,name:r.slots[s].name||null}])),controllers:r.controllers}}
 function authorize(r,side,t){return !!r&&!!r.started&&SIDES.includes(side)&&r.slots[side].kind==='human'&&r.slots[side].token===t}
 function requirePlayer(r,side,t){if(!authorize(r,side,t))throw Error('Unauthorized faction: join the lobby first')}
-function createRoom(mode,name,accumulated=true){let r={accumulated,bank:{wei:mode,shu:mode,wu:mode},sideDeadline:{},state:null,version:0,phase:1,mode,deadline:null,ready:{wei:false,shu:false,wu:false},pendingTurn:false,stopped:false,log:[],initialized:false,started:false,hostToken:token(),slots:Object.fromEntries(SIDES.map(s=>[s,{kind:'open',name:null,token:null}])),controllers:{wei:'open',shu:'open',wu:'open'}};return r}
+function createRoom(mode,name,accumulated=true){let r={accumulated,bank:{wei:0,shu:0,wu:0},sideDeadline:{},state:null,version:0,phase:1,mode,deadline:null,ready:{wei:false,shu:false,wu:false},pendingTurn:false,stopped:false,log:[],initialized:false,started:false,hostToken:token(),slots:Object.fromEntries(SIDES.map(s=>[s,{kind:'open',name:null,token:null}])),controllers:{wei:'open',shu:'open',wu:'open'}};return r}
 function adjacent(id){return EDGES.filter(e=>e.includes(id)).map(e=>e[0]===id?e[1]:e[0])}
 function moveWanderers(st){if(!st.wandering)return;for(const [name,id] of Object.entries(st.wandering)){const next=adjacent(Number(id));if(next.length&&Math.random()<.7)st.wandering[name]=next[Math.floor(Math.random()*next.length)]}st.discovered={};st.offerPrices={}}
 
@@ -58,7 +58,7 @@ function startNextTurn(r){
  r.phase++;r.ready=Object.fromEntries(SIDES.map(side=>[side,r.controllers[side]==='surrendered']));r.pendingTurn=false;
  if(r.accumulated){
   const now=Date.now();r.sideDeadline={};
-  for(const side of SIDES){r.bank[side]=Math.max(0,(r.bank[side]??r.mode))+r.mode;if(r.controllers[side]==='human'&&!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000}
+  for(const side of SIDES){r.bank[side]=Math.max(0,(r.bank[side]??0))+r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000}
   r.deadline=Math.max(now,...Object.values(r.sideDeadline));
  }else r.deadline=Date.now()+r.mode*1000;
  r.version++;
@@ -201,6 +201,7 @@ function autoAI(r){
      if((st.searchCount?.[c.id]||0)<1)run({type:'search',city:c.id});
     }
    }
+   if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,Math.ceil((r.sideDeadline[side]-Date.now())/1000));delete r.sideDeadline[side]}
    r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 two-ply planning complete'});
   }
  }finally{r.aiBusy=false}
@@ -211,13 +212,18 @@ function finishSide(r,side){
  r.ready[side]=true;autoAI(r);if(SIDES.every(s=>r.ready[s]))startNextTurn(r)}
 
 function advance(r){
- if(r.stopped||!r.state)return;
- if(r.started&&r.accumulated&&r.sideDeadline){
-  const now=Date.now();
-  for(const [side,deadline] of Object.entries(r.sideDeadline)){if(!r.ready[side]&&now>=deadline){r.bank[side]=0;r.ready[side]=true;delete r.sideDeadline[side];r.log.push({phase:r.phase,side,txt:'Time expired — End Turn'})}}
-  if(SIDES.every(side=>r.ready[side])){startNextTurn(r);return}
+ if(r.stopped||!r.state||!r.started)return;
+ const now=Date.now();
+ if(r.accumulated){
+  for(const [side,deadline] of Object.entries(r.sideDeadline||{})){
+   if(!r.ready[side]&&now>=deadline){r.bank[side]=0;r.ready[side]=true;delete r.sideDeadline[side];r.log.push({phase:r.phase,side,txt:'Time expired — forced End Turn'})}
+  }
+ }else if(r.deadline&&now>=r.deadline){
+  for(const side of SIDES)if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'Time expired — forced End Turn'})}
  }
- if(r.started&&r.deadline&&Date.now()>=r.deadline){autoAI(r);startNextTurn(r);}
+ if(SIDES.every(side=>r.ready[side])){startNextTurn(r);return}
+ // AI uses the same deadline and bank as humans, but executes its moves automatically.
+ if(SIDES.some(side=>r.controllers[side]==='ai'&&!r.ready[side]))autoAI(r);
 }
 setInterval(()=>{for(const r of rooms.values())advance(r)},500).unref();
 function view(r){if(r.state)TREASURE.ensure(r.state);if(r.state)syncVictory(r.state);advance(r);return {stopped:!!r.stopped,version:r.version,phase:r.phase,deadline:r.deadline,sideDeadline:r.sideDeadline,bank:r.bank,accumulated:!!r.accumulated,mode:r.mode,ready:r.ready,pendingTurn:r.pendingTurn,state:r.state,log:r.log.slice(-25)}}
@@ -533,7 +539,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};for(const side of SIDES){if(r.controllers[side]==='human'&&!r.ready[side])r.sideDeadline[side]=now+r.mode*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else r.deadline=now+r.mode*1000;}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};for(const side of SIDES){if(!r.ready[side])r.sideDeadline[side]=now+r.mode*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else r.deadline=now+r.mode*1000;}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');if(!r.ready[b.side]){r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});
