@@ -406,8 +406,11 @@ http.createServer(async(req,res)=>{try{
   if(!SIDES.includes(b.side))return reply(res,400,{error:'Invalid faction'});
   const slot=r.slots[b.side];if(slot.kind!=='open')return reply(res,409,{error:'Faction not open'});
   const claimed=SIDES.find(s=>r.slots[s].token===b.playerToken&&b.playerToken);
-  if(claimed)return reply(res,409,{error:'Player already owns '+claimed});
-  slot.kind='human';slot.token=token();slot.name=String(b.name||'Player').trim().slice(0,24)||'Player';r.version++;
+  // Allow an existing player to switch factions atomically while the target is open.
+  // Keep the same player token, so ownership remains valid across the switch.
+  const nextToken=claimed?b.playerToken:token();
+  if(claimed&&claimed!==b.side)r.slots[claimed]={kind:'open',name:null,token:null};
+  slot.kind='human';slot.token=nextToken;slot.name=String(b.name||'Player').trim().slice(0,24)||'Player';r.version++;
   return reply(res,200,{...lobbyView(r,code),playerToken:slot.token,side:b.side});
  }
  if(req.method==='POST'&&u.pathname==='/api/lobby/exit'){
