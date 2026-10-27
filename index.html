@@ -286,7 +286,31 @@ body.city-open #cityPanel{display:block}
 #gameBottomToolbar #inventoryButton{background:linear-gradient(145deg,#735628,#47351e)!important;border-color:#d4b36b!important;min-width:130px}
 #gameBottomToolbar .toolbarSecondary button{font-size:10px!important;padding:6px 10px!important;min-height:29px;color:#c9d5ca!important}
 @media(max-width:680px){#gameBottomToolbar{right:7px;bottom:8px;max-width:calc(100vw - 14px)}#gameBottomToolbar button{min-width:0!important;padding:6px 8px!important;font-size:10px!important}#gameBottomToolbar .toolbarSecondary button{font-size:9px!important;padding:5px 7px!important}}
-</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.5.28 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><div class="faction-banners" aria-label="Three Kingdoms factions"><div class="faction-banner wei"><span class="faction-emblem">魏</span><span>Wei</span></div><div class="faction-banner shu"><span class="faction-emblem">蜀</span><span>Shu</span></div><div class="faction-banner wu"><span class="faction-emblem">吳</span><span>Wu</span></div></div><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Three Kingdoms isometric map"></svg></div><div class="maptools"><button id="zoomOut">−</button><span>Drag map · Pinch / Zoom</span><button id="zoomIn">+</button><button id="resetMap">Reset</button></div><div id="gameBottomToolbar"><div class="toolbarPrimary"><button id="inventoryButton">🎒 Inventory</button><button id="end" style="background:#795b29">End Turn ▶</button></div><div class="toolbarSecondary"><button id="encyclopedia">📜 Hero Encyclopedia</button><button id="sound">🔊 Sound ON</button><button id="bgm">♫ Music ON</button></div></div></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Select a City</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="spyBottom">🥷 Espionage</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="stanceBottom">🛡 Defense Stance</button><span class="action-placeholder" aria-hidden="true"></span></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
+</style><style id="rotk-v3529-responsive">
+/* 70% compact interface chrome; map remains full-bleed and touch targets remain usable. */
+header,.hudstats,.maptools,#cityPanel,#audioControls,#inboxButton,#gameBottomToolbar,#battleBox,#multiplayerLobby,.legend{zoom:.7}
+#gameBottomToolbar{right:12px;bottom:10px;gap:9px;max-width:calc(100vw / .7 - 30px)}
+#gameBottomToolbar .toolbarPrimary,#gameBottomToolbar .toolbarSecondary{gap:8px;flex-wrap:nowrap}
+#gameBottomToolbar button{white-space:nowrap}
+#audioControls{top:105px;right:12px;bottom:auto;flex-wrap:wrap;max-width:270px}
+.maptools{top:8px;right:12px;padding:4px}
+.maptools button{font-size:13px;padding:8px 12px}
+#inboxButton{top:58px;right:12px}
+#cityPanel{right:12px;top:72px;bottom:12px;width:min(560px,72vw);max-height:calc((100dvh - 84px)/.7)!important}
+@media(orientation:landscape) and (max-height:600px){
+ header{top:5px;left:7px}.hudstats{top:49px;left:7px}
+ #gameBottomToolbar{right:8px;bottom:8px;gap:7px}
+ #gameBottomToolbar .toolbarPrimary button{min-height:35px}
+ #gameBottomToolbar .toolbarSecondary button{min-height:30px}
+ #audioControls{top:113px;right:8px;bottom:auto}
+ #cityPanel{top:8px;bottom:8px;right:8px;width:min(540px,75vw);max-height:calc((100dvh - 16px)/.7)!important}
+}
+@media(orientation:portrait){
+ #gameBottomToolbar{right:7px;bottom:7px}
+ #gameBottomToolbar .toolbarSecondary{flex-wrap:wrap;justify-content:flex-end}
+ #cityPanel{width:min(560px,95vw)}
+}
+</style><style id="rotk-v3530-city-heading">#cityPanel #citytitle{display:none!important}#cityPanel .citydash .city-value-title{font-family:Georgia,serif;font-weight:800;color:#f3d693;font-size:clamp(11px,1.2vw,17px);white-space:nowrap;letter-spacing:.2px;text-transform:none}</style><style id="rotk-v3531-status">.hudstats{display:flex!important;flex-wrap:wrap;column-gap:10px!important;row-gap:3px!important;max-width:min(95vw,440px)}#onlineStatus{display:block;flex:0 0 100%;font-size:11px;font-weight:700;white-space:nowrap;color:#ffe2a3;line-height:1.3}#onlineStatus:empty{display:none}@media(orientation:landscape) and (max-height:600px){.hudstats{max-width:min(90vw,430px)}#onlineStatus{font-size:10px}}</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.5.31 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b><span id="onlineStatus" aria-live="off"></span></div><div id="mapViewport"><div class="faction-banners" aria-label="Three Kingdoms factions"><div class="faction-banner wei"><span class="faction-emblem">魏</span><span>Wei</span></div><div class="faction-banner shu"><span class="faction-emblem">蜀</span><span>Shu</span></div><div class="faction-banner wu"><span class="faction-emblem">吳</span><span>Wu</span></div></div><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Three Kingdoms isometric map"></svg></div><div class="maptools"><button id="fullscreenToggle" type="button" aria-label="Toggle fullscreen">⛶ Full Screen</button></div><div id="gameBottomToolbar"><div class="toolbarPrimary"><button id="inventoryButton">🎒 Inventory</button><button id="end" style="background:#795b29">End Turn ▶</button></div><div class="toolbarSecondary"><button id="encyclopedia">📜 Hero Encyclopedia</button><button id="sound">🔊 Sound ON</button><button id="bgm">♫ Music ON</button></div></div></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Select a City</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="spyBottom">🥷 Espionage</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="stanceBottom">🛡 Defense Stance</button><span class="action-placeholder" aria-hidden="true"></span></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
 <div id="audioControls"><label>🔊 SFX <input id="sfxSlider" type="range" min="0" max="100" value="90" aria-label="SFX volume"></label><label>♫ Music <input id="musicSlider" type="range" min="0" max="100" value="50" aria-label="Music volume"></label></div><button id="inboxButton" title="Battle Inbox">✉ Inbox <span class="unread" id="inboxUnread"></span></button><div id="battleOverlay"><div id="battleBox"><h2 id="battleTitle"></h2><div id="battleBody"></div><div id="battleButtons" class="battlebuttons"></div></div></div><script src="/economy_engine.js"></script><script src="/treasure_engine.js"></script><script>
 (()=>{'use strict';
 const defs=[
@@ -439,7 +463,7 @@ function bgmPlayNext(){
  classicBgm.src='/Music/backmusic'+bgmTrack+'.mp3';
  classicBgm.load();
  updateClassicMusicVolume();
- classicBgm.play().catch(e=>musicStatus('Playback blocked: '+e.message));
+ classicBgm.play().catch(e=>{bgmStartAttempted=false;musicStatus('Tap Music to resume: '+e.message)});
 }
 classicBgm.loop=true; // Keep current track until its randomized turn interval ends.
 classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
@@ -467,7 +491,7 @@ async function toggleMusic(){
  musicOn=!musicOn;updateClassicMusicVolume();$('bgm').textContent=musicOn?'♫ Music ON':'♫ Music OFF';
  if(!musicOn){classicBgm.pause();musicStatus('Music paused');return}
  try{await classicBgm.play();musicStatus('Playing backmusic'+bgmTrack+'.mp3')}
- catch(e){musicOn=false;updateClassicMusicVolume();$('bgm').textContent='♫ Music BLOCKED';musicStatus('Playback failed: '+e.message+' — click Music again or check Safari site audio permissions');console.warn('Music playback failed',e)}
+ catch(e){bgmStartAttempted=false;musicStatus('Playback blocked: tap Music again after interacting with the game');console.warn('Music playback failed',e)}
 }
 const ACTION_SFX_FILES={farm:'TRADE',food:'HARVEST',recruit:'RECRUIT',train:'DRILL',fort:'PATROL'};
 const actionSoundCache={};
@@ -953,7 +977,7 @@ function cityDashboard(c){
  const row=(ico,current,detail,growth,dev,hero,action)=>`<div class="drow"><div class="resourceIcon">${ico}</div><div><div class="current">${current}</div><div class="sub">${detail}</div></div><div>${growth==null?'<span class="sub">—</span>':net(growth)}</div><div class="statval">${dev}</div><div class="statval">${hero}</div><div>${action}</div></div>`;
  const turnDelta=previewCityTurn(c);
  let foodIn=Math.max(1,Math.floor((c.harvest+Math.round(stat(c,3)*domesticMultiplier(c,3)))*.013)),foodOut=Math.ceil(c.troops*.08),drillXP=Math.round(Math.max(1,c.trainingBase||220)*actionMultiplier(c,'train')),recruits=recruitGain(c);
- return `<div class="citydash"><div class="drow dhead"><div></div><div>CITY VALUE</div><div>NET / TURN</div><div>CITY DEVELOPMENT</div><div>HERO STATS</div><div>ACTION</div></div>
+ return `<div class="citydash"><div class="drow dhead"><div></div><div id="cityValueTitle" class="city-value-title">CITY VALUE</div><div>NET / TURN</div><div>CITY DEVELOPMENT</div><div>HERO STATS</div><div>ACTION</div></div>
  ${row('<span class="gold-coin" role="img" aria-label="Gold"></span>',fmt(c.gold),'Gold',turnDelta.gold,`Commerce ${fmt(c.commerce)}<span class="dev-turn">${net(turnDelta.commerce)} / turn</span>`,`INT ${fmt(int)}`,btn('farm','Trade +'+fmt(Math.round(developGain(c)*.44))))}
  ${row('🌾',fmt(c.food),`+${fmt(foodIn)} / −${fmt(foodOut)}`,turnDelta.food,`Agriculture ${fmt(c.harvest)}<span class="dev-turn">${net(turnDelta.harvest)} / turn</span>`,`POL ${fmt(pol)}`,btn('food',(harvestCooldown[c.id]||0)>turn?'Harvest CD T'+harvestCooldown[c.id]:'Harvest +'+fmt(harvestGain(c))))}
  ${row('👥',fmt(c.pool),'DraftPool',turnDelta.pool,`Safety ${fmt(c.manpower||0)}<span class="dev-turn">${net(turnDelta.manpower)} / turn</span>`,`LDR ${fmt(ldr)}`,btn('recruit',`Recruit +${fmt(recruits)} · 130<span class="gold-coin" role="img" aria-label="Gold"></span>`,c.gold>=130&&recruits>0))}
@@ -994,27 +1018,35 @@ for(const c of [...cities].sort((a,b)=>a.y-b.y))art+=fortress(c);
 art+=`<rect width="760" height="490" filter="url(#papergrain)" pointer-events="none" opacity=".32"/>`;
 svg.innerHTML=art;
 svg.querySelectorAll('[data-city]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();clickCity(+el.dataset.city)}));
-let c=cities[selected];$('citytitle').textContent=c.name+' · '+['Wei','Shu','Wu'][c.owner];$('turn').textContent='Turn '+turn;$('status').textContent=over?'GAME FINISHED':['Wei','Shu','Wu'][playerOwner]+' '+cities.filter(c=>c.owner===playerOwner).length+'/15 cities';$('info').innerHTML=cityDashboard(c);
+let c=cities[selected];$('citytitle').textContent=c.name+' · '+['Wei','Shu','Wu'][c.owner];$('cityValueTitle').textContent=$('citytitle').textContent;$('turn').textContent='Turn '+turn;$('status').textContent=over?'GAME FINISHED':['Wei','Shu','Wu'][playerOwner]+' '+cities.filter(c=>c.owner===playerOwner).length+'/15 cities';$('info').innerHTML=cityDashboard(c);
 for(const id of ['farm','recruit','fort','move','food'])$(id).disabled=over||c.owner!==playerOwner||c.used; $('attack').disabled=over||c.owner!==playerOwner; $('spyBottom').disabled=over||c.owner!==playerOwner||!heroAvailable(c).length; $('stanceBottom').disabled=over||c.owner!==playerOwner; $('station').disabled=over||c.owner!==playerOwner||!officers(c).length; $('hire').disabled=over||c.owner!==playerOwner; if($('marketpanel').style.display!=='none')showMarket();
 if(!mode)$('hint').textContent=''}
 $('spyBottom').addEventListener('click',()=>action('spy'));
 $('stanceBottom').addEventListener('click',()=>action('stance'));
 $('info').addEventListener('click',e=>{let b=e.target.closest('[data-dashaction]');if(b&&!b.disabled){if(b.dataset.dashaction==='officers')showCityOfficers();else if(b.dataset.dashaction==='governor')appointGovernor();else action(b.dataset.dashaction)}});
-// Browsers may block autoplay before the first user gesture. Start default-ON BGM
-// at the first interaction, while keeping the Music button and 50% volume.
+// Mobile browsers require an explicit trusted gesture to unlock media.
 let bgmStartAttempted=false;
-document.addEventListener('pointerdown',()=>{
- if(bgmStartAttempted||!musicOn||!soundOn)return;
+function unlockMobileAudio(){
+ if(!musicOn||!soundOn||!classicBgm.paused)return;
+ if(bgmStartAttempted)return;
  bgmStartAttempted=true;
  updateClassicMusicVolume();
- classicBgm.play().catch(()=>{bgmStartAttempted=false;});
-},{capture:true});
+ const result=classicBgm.play();
+ if(result&&typeof result.then==='function')result.then(()=>{musicStatus('Music playing');}).catch(e=>{bgmStartAttempted=false;musicStatus('Tap Music to enable audio: '+e.message)});
+ else bgmStartAttempted=false;
+}
+for(const eventName of ['touchend','pointerup','click','keydown']){
+ document.addEventListener(eventName,unlockMobileAudio,{capture:true,passive:true});
+}
 for(const id of ['farm','recruit','fort','attack','move','food','hire','station'])$(id).onclick=()=>action(id);$('closemarket').onclick=()=>{$('marketpanel').style.display='none'};$('end').onclick=multiplayerEnd;$('bgm').onclick=toggleMusic;$('sfxSlider').oninput=e=>sfxVolume=+e.target.value/100;$('musicSlider').oninput=e=>{musicVolume=+e.target.value/100;updateClassicMusicVolume()};$('sound').onclick=()=>{soundOn=!soundOn;$('sound').textContent=soundOn?'🔊 Sound ON':'🔇 Sound OFF';updateClassicMusicVolume();if(soundOn)sfx('turn')};$('inventoryButton').onclick=showInventory;
 $('encyclopedia').onclick=showEncyclopedia;
 let mapZoom=1,mapPanX=0,mapPanY=0,mapPointers=new Map(),mapDragged=false,pinchStart=0;
 function applyMap(){let m=$('map');m.style.transform=`translate(${mapPanX}px,${mapPanY}px) scale(${mapZoom})`}
 function changeZoom(f){mapZoom=Math.max(1,Math.min(3.2,mapZoom*f));applyMap()}
-$('zoomIn').onclick=()=>changeZoom(1.25);$('zoomOut').onclick=()=>changeZoom(.8);$('resetMap').onclick=()=>{mapZoom=1;mapPanX=mapPanY=0;applyMap()};
+const fullscreenButton=$('fullscreenToggle');
+function syncFullscreenButton(){fullscreenButton.textContent=document.fullscreenElement?'⛶ Exit Full Screen':'⛶ Full Screen'}
+fullscreenButton.onclick=async()=>{try{if(document.fullscreenElement){await document.exitFullscreen()}else if(document.documentElement.requestFullscreen){await document.documentElement.requestFullscreen()}else{musicStatus('Fullscreen is not supported by this browser')}}catch(e){fullscreenButton.title='Fullscreen unavailable: '+e.message}syncFullscreenButton()};
+document.addEventListener('fullscreenchange',syncFullscreenButton);
 const vp=$('mapViewport');
 vp.addEventListener('pointerdown',e=>{mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});mapDragged=false;if(mapPointers.size===2){let a=[...mapPointers.values()];pinchStart=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}});
 vp.addEventListener('pointermove',e=>{if(!mapPointers.has(e.pointerId))return;let old=mapPointers.get(e.pointerId);let dx=e.clientX-old.x,dy=e.clientY-old.y;mapPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(Math.abs(dx)+Math.abs(dy)>6){mapDragged=true;if(!vp.hasPointerCapture(e.pointerId))vp.setPointerCapture(e.pointerId)}if(mapPointers.size===1){mapPanX+=dx;mapPanY+=dy}else if(mapPointers.size===2){let a=[...mapPointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinchStart>0)changeZoom(d/pinchStart);pinchStart=d;mapPanX+=dx*.5;mapPanY+=dy*.5}mapPanX=Math.max(-600,Math.min(600,mapPanX));mapPanY=Math.max(-400,Math.min(400,mapPanY));applyMap()});
@@ -1037,7 +1069,7 @@ function snapshot(){return {inventory,equipment,foundTreasures,cities,turn,over,
 function applySnapshot(s){if(!s)return;netApplying=true;inventory=s.inventory||{0:[],1:[],2:[]};equipment=s.equipment||{};foundTreasures=s.foundTreasures||[];cities=s.cities;cities.forEach(c=>{if(!officers(c).includes(c.governor))c.governor=officers(c)[0]||null});turn=s.turn;bgmObserveTurn(turn);over=new Set(cities.map(c=>c.owner)).size===1;logs=s.logs||[];renderPublicChronicle();acted=s.acted;fallen=new Set(s.fallen||[]);wandering=s.wandering||{};discovered=s.discovered||{};searchRolls=s.searchRolls||{};searchCount=s.searchCount||{};harvestCooldown=s.harvestCooldown||{};captives=s.captives||{};offerPrices=s.offerPrices||{};lastAiHire=s.lastAiHire||{0:-10,2:-10};battleInbox=s.battleInbox||[];battleSerial=s.battleSerial||0;lastBattle=s.lastBattle||null;incidentInbox=s.incidentInbox||[];chosenHeroes=[];persuadeCount=s.persuadeCount||{};stationCooldown=s.stationCooldown||{};heroAP=s.heroAP||{};defenseTactics=s.defenseTactics||{};defenseFormations=s.defenseFormations||{};spyEffects=s.spyEffects||{};scoutIntel=s.scoutIntel||{};mode='';if(cities[selected]?.owner!==playerOwner)selected=cities.find(c=>c.owner===playerOwner)?.id||0;draw();netApplying=false;netLast=JSON.stringify(snapshot())}
 async function req(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw Object.assign(Error(j.error||'Server error'),{response:j,status:r.status});return j}
 const endpoint='/api/state?code='+encodeURIComponent(roomCode);
-function banner(s){let el=document.getElementById('onlineStatus');if(el)el.textContent=s}
+function banner(s){const el=document.getElementById('onlineStatus');if(!el)return;if(!netReady)return;el.textContent='ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · '+(netDeadline?Math.max(0,Math.ceil((netDeadline-Date.now())/1000)):'waiting')+'s'}
 async function netRefresh(){if(netBusy||netApplying)return;try{const j=await (await fetch(endpoint,{cache:'no-store'})).json();if(!j.ok)return;
  if(j.stopped){banner('ROOM STOPPED · Open Lobby to restart');return}
  if(!j.state){netVersion=j.version;netDeadline=j.deadline||0;return}
@@ -1140,11 +1172,11 @@ const lobbyButton=document.createElement('button');lobbyButton.textContent='☷ 
 lobbyButton.onclick=()=>{location.href='/lobby?code='+encodeURIComponent(roomCode)};
 document.getElementById('lobbyStop').onclick=()=>location.href='/lobby?code='+encodeURIComponent(roomCode);
 document.getElementById('lobbyRestart').onclick=()=>location.href='/lobby?code='+encodeURIComponent(roomCode);
-const bar=document.createElement('div');bar.id='onlineStatus';bar.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;background:#142536;color:#ffe2a3;padding:4px 12px;border:1px solid #b99554;border-radius:0 0 9px 9px;font:12px system-ui';bar.textContent='Connecting multiplayer...';document.body.appendChild(bar);
+// Online status is now a fixed-format row inside the turn HUD.
 init();bgmObserveTurn(turn);closeCity();
 (async()=>{try{const j=await req('/api/join?code='+roomCode,{mode:Number(qs.get('mode'))||60,side:playerSide,token:playerToken});netVersion=j.version;netPhase=j.phase;netDeadline=j.deadline||0;observeServerPhase(netPhase,!!j.ready?.[playerSide]);
  if(j.state)applySnapshot(j.state);else {netLast='';await netCommit()}
- netReady=true;setInterval(netRefresh,850);setInterval(()=>banner('ONLINE · '+roomCode+' · '+playerSide.toUpperCase()+' · '+(netDeadline?Math.max(0,Math.ceil((netDeadline-Date.now())/1000)):'waiting')+'s'),1000);
+ netReady=true;setInterval(netRefresh,850);setInterval(()=>banner(),1000);
  banner('ROTK v3.0.1 · Connected as '+playerSide.toUpperCase());
  }catch(e){banner('Connection error: '+e.message)}})();
 
