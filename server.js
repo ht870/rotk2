@@ -21,7 +21,7 @@ function token(){return crypto.randomBytes(18).toString('hex')}
 function lobbyView(r,code){return {ok:true,code,started:!!r.started,stopped:!!r.stopped,version:r.version,mode:r.mode,accumulated:!!r.accumulated,slots:Object.fromEntries(SIDES.map(s=>[s,{kind:r.slots[s].kind,name:r.slots[s].name||null}])),controllers:r.controllers}}
 function authorize(r,side,t){return !!r&&!!r.started&&SIDES.includes(side)&&r.slots[side].kind==='human'&&r.slots[side].token===t}
 function requirePlayer(r,side,t){if(!authorize(r,side,t))throw Error('Unauthorized faction: join the lobby first')}
-function createRoom(mode,name,accumulated=true){let r={accumulated,bank:{wei:0,shu:0,wu:0},sideDeadline:{},displayDeadline:{},state:null,version:0,phase:1,mode,deadline:null,ready:{wei:false,shu:false,wu:false},pendingTurn:false,stopped:false,log:[],initialized:false,started:false,hostToken:token(),slots:Object.fromEntries(SIDES.map(s=>[s,{kind:'open',name:null,token:null}])),controllers:{wei:'open',shu:'open',wu:'open'}};return r}
+function createRoom(mode,name,accumulated=true){let r={accumulated,bank:{wei:mode,shu:mode,wu:mode},sideDeadline:{},displayDeadline:{},state:null,version:0,phase:1,mode,deadline:null,ready:{wei:false,shu:false,wu:false},pendingTurn:false,stopped:false,log:[],initialized:false,started:false,hostToken:token(),slots:Object.fromEntries(SIDES.map(s=>[s,{kind:'open',name:null,token:null}])),controllers:{wei:'open',shu:'open',wu:'open'}};return r}
 function adjacent(id){return EDGES.filter(e=>e.includes(id)).map(e=>e[0]===id?e[1]:e[0])}
 function moveWanderers(st){if(!st.wandering)return;for(const [name,id] of Object.entries(st.wandering)){const next=adjacent(Number(id));if(next.length&&Math.random()<.7)st.wandering[name]=next[Math.floor(Math.random()*next.length)]}st.discovered={};st.offerPrices={}}
 
@@ -504,7 +504,7 @@ http.createServer(async(req,res)=>{try{
  const raw=q.get('actions')||'';
  const items=raw?raw.split(','):[];
  if(items.length>15)return reply(res,400,{error:'Too many actions'});
- const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};
+ const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready},bank:{...r.bank},sideDeadline:{...r.sideDeadline},displayDeadline:{...r.displayDeadline}};
  const messages=[];
  try{
  const json=q.get('batch');
@@ -514,6 +514,7 @@ http.createServer(async(req,res)=>{try{
  return {type:m[1],city:Number(m[2]),to:m[3]==null?undefined:Number(m[3]),name:m[4]?.replaceAll('_',' ')};
  });
  if(!Array.isArray(parsed)||parsed.length>15)throw Error('Invalid batch length');
+ if(r.ready[side])throw Error('Side already ended turn');
  for(const act of parsed)messages.push(applyAction(copy,side,owner,act));
  }
  catch(e){return reply(res,409,{ok:false,error:e.message,rolledBack:true,version:r.version})}
@@ -531,7 +532,7 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='GET'&&u.pathname==='/api/action'){let r=room(code),q=u.searchParams;if(!r)return reply(res,404,{error:'Room not found'});requirePlayer(r,q.get('side'),q.get('token'));advance(r);if(r.stopped||r.pendingTurn||!r.state)return reply(res,409,{error:'Room not active or awaiting turn transition'});let side=q.get('side'),owner=SIDES.indexOf(side);if(owner<0)return reply(res,400,{error:'Invalid side'});if(r.ready[side])return reply(res,409,{error:'Side already ended turn'});
  const v=q.get('version');if(v!==null&&Number(v)!==r.version)return reply(res,409,{error:'Version mismatch',currentVersion:r.version});
- const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic'),item:q.get('item')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
+ const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic'),item:q.get('item')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready},bank:{...r.bank},sideDeadline:{...r.sideDeadline},displayDeadline:{...r.displayDeadline}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
  if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){
@@ -543,7 +544,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};for(const side of SIDES){if(!r.ready[side])r.sideDeadline[side]=now+r.mode*1000;r.displayDeadline[side]=now+r.mode*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else r.deadline=now+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};r.displayDeadline={};for(const side of SIDES){r.bank[side]=r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else r.deadline=now+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');if(!r.ready[b.side]){r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});
