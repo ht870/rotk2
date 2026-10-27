@@ -298,7 +298,7 @@ const officerData={
 'Wei Yan':[88,91,55,41],'Jiang Wei':[92,89,93,72],'Fa Zheng':[79,42,94,86],'Xu Shu':[82,48,94,88],'Liao Hua':[75,74,59,53],'Wang Ping':[85,78,79,64],'Guan Ping':[82,85,58,50],'Zhang Bao':[80,88,42,38],
 'Xiahou Yuan':[88,91,60,48],'Dian Wei':[76,98,39,30],'Xu Chu':[78,97,37,28],'Cao Ren':[91,84,70,65],'Yu Jin':[86,78,71,61],'Zhang He':[92,88,80,67],'Jia Xu':[86,48,98,92],'Xun Yu':[85,18,97,99],
 'Sun Ce':[93,94,74,76],'Sun Jian':[92,91,75,76],'Huang Gai':[82,83,65,61],'Cheng Pu':[85,79,74,69],'Zhou Tai':[82,93,48,41],'Ding Feng':[85,86,70,55],'Lu Su':[84,41,92,95],'Zhuge Jin':[78,37,88,93],'Lü Bu':[92,100,35,24],'Chen Gong':[75,54,94,81],'Gao Shun':[91,90,68,45],'Yan Yan':[82,86,69,52]};
-const market=Object.keys(officerData).filter(n=>!['Liu Bei','Guan Yu','Zhang Fei','Zhao Yun','Cao Cao','Xiahou Dun','Zhang Liao','Sima Yi','Sun Quan','Lu Meng','Zhou Yu','Lu Xun'].includes(n));
+const market=Object.keys(officerData).filter(n=>!['Liu Bei','Guan Yu','Zhang Fei','Zhao Yun','Cao Cao','Xiahou Dun','Zhang Liao','Sima Yi','Sun Quan','Cheng Pu','Zhou Yu','Lu Xun'].includes(n));
 // Common officers are intentionally plentiful and valuable for economic specialization.
 for(let i=1;i<=42;i++){const n=namedCommons[i-1];officerData[n]=[38+(i*13)%25,39+(i*17)%24,37+(i*19)%27,40+(i*11)%23];market.push(n)}
 
@@ -309,7 +309,7 @@ for(const n of ["Cao Zhen", "Guo Huai", "Chen Qun", "Cheng Yu", "Du Yu", "Ma Lia
 // Explicit historically themed tiers: never infer a legendary tier from a random stat threshold.
 const HERO_TIERS={"Guan Yu":"S","Zhang Fei":"S","Zhao Yun":"S","Ma Chao":"S","Huang Zhong":"S","Zhuge Liang":"S+","Cao Cao":"S+","Sima Yi":"S+","Zhou Yu":"S+","Lu Xun":"S","Zhang Liao":"S","Lü Bu":"S","Pang Tong":"S","Guo Jia":"S","Jia Xu":"S","Xun Yu":"S","Sun Ce":"S","Sun Jian":"S","Jiang Wei":"S","Zhang He":"S","Liu Bei":"S","Sun Quan":"S","Xiahou Dun":"A","Xiahou Yuan":"A","Xu Huang":"A","Dian Wei":"A","Xu Chu":"A","Cao Ren":"A","Gan Ning":"A","Taishi Ci":"A","Wei Yan":"A","Pang De":"A","Lu Meng":"S","Lu Su":"S","Xu Shu":"A","Fa Zheng":"A","Yu Jin":"A","Gao Shun":"A","Chen Gong":"A","Zhang Ren":"B","Yan Yan":"A","Zhou Tai":"A","Zhuge Jin":"A","Huang Gai":"A","Cheng Pu":"A","Wang Ping":"A","Guan Ping":"A","Zhang Bao":"A","Ding Feng":"A","Xun You":"S","Zhuge Dan":"A","Deng Ai":"S","Zhong Hui":"A","Wen Yang":"A","Liao Hua":"B","Cao Hong":"B","Zhu Huan":"B","Li Dian":"B","Yue Jin":"B","Han Dang":"B","Ma Dai":"B","Guan Xing":"B","Zhang Yi":"B","Zhang Ni":"B","Wu Yi":"B","Fei Yi":"A","Dong Yun":"B","Jiang Wan":"A","Liu Feng":"B","Meng Huo":"B","Zhu Rong":"B","Cao Pi":"B","Cao Zhi":"B","Cao Zhang":"B","Sima Shi":"A","Sima Zhao":"A","Man Chong":"B","Tian Yu":"B","Wen Ping":"B","Zang Ba":"B","Xu Sheng":"B","Pan Zhang":"B","Jiang Qin":"B","Ling Tong":"B","He Qi":"B","Bu Zhi":"B","Zhang Zhao":"A","Zhang Hong":"B","Kan Ze":"B","Lu Fan":"B","Cao Bao":"C","Han Xuan":"C","Yang Song":"C","Liu Xian":"C","Fu Shiren":"C","Mi Fang":"C","Han Hao":"C","Mi Zhu":"C","Liu Zhang":"C","Liu Biao":"C","Liu Qi":"C","Huang Zu":"C","Cai Mao":"C","Zhang Yun":"C","Chen Deng":"C","Chen Gui":"C","Tao Qian":"C","Kong Rong":"C","Kong Zhou":"C","Han Fu":"C","Liu Dai":"C","Wang Lang":"C","Yan Baihu":"C","Xu Gong":"C","Zhang Lu":"C","Yang Ren":"C","Yang Ang":"C","Hou Cheng":"C","Song Xian":"C","Wei Xu":"C","Li Jue":"C","Guo Si":"C","Fan Chou":"C","Zhang Ji":"C","Ji Ling":"C","Lei Bo":"C","Liu Du":"C","Zhao Fan":"C","Liu Yan":"C","Gongsun Zan":"C","Cao Zhen":"B","Guo Huai":"B","Chen Qun":"B","Cheng Yu":"A","Du Yu":"A","Ma Liang":"B","Jian Yong":"B","Zhu Ran":"B","Lu Kang":"S","Quan Cong":"B","Tian Feng":"B","Ju Shou":"A"};
 Object.assign(officerData,{"Xun You":[85,25,94,92],"Zhuge Dan":[86,73,83,70],"Deng Ai":[93,85,92,80],"Zhong Hui":[85,62,94,79],"Wen Yang":[83,96,67,49],"Ma Dai":[78,84,57,54],"Guan Xing":[80,84,51,48],"Zhang Yi":[81,75,73,67],"Zhang Ni":[82,79,66,62],"Wu Yi":[76,73,64,64],"Fei Yi":[73,34,87,94],"Dong Yun":[68,28,81,93],"Jiang Wan":[74,38,88,96],"Liu Feng":[75,79,49,42],"Meng Huo":[79,86,39,43],"Zhu Rong":[73,89,45,38],"Cao Pi":[77,64,83,89],"Cao Zhi":[45,29,88,66],"Cao Zhang":[82,90,47,41],"Sima Shi":[88,64,91,88],"Sima Zhao":[89,65,90,90],"Man Chong":[83,68,84,81],"Tian Yu":[79,75,71,69],"Wen Ping":[83,82,66,57],"Zang Ba":[81,81,58,55],"Xu Sheng":[82,83,69,58],"Pan Zhang":[76,80,55,44],"Jiang Qin":[80,78,65,56],"Ling Tong":[84,89,66,48],"He Qi":[80,77,73,66],"Bu Zhi":[70,36,81,87],"Zhang Zhao":[66,23,87,97],"Zhang Hong":[65,24,85,94],"Kan Ze":[68,28,85,88],"Lu Fan":[71,42,82,87],"Liu Du":[47,42,48,52],"Zhao Fan":[49,41,52,57],"Liu Yan":[62,47,62,72],"Gongsun Zan":[74,81,53,48],"Pang De":[85,94,53,40],"Han Dang":[80,78,64,58],"Li Dian":[78,75,73,69],"Yue Jin":[84,84,60,51]});
-for(const n of Object.keys(HERO_TIERS)){if(!officerData[n])officerData[n]=[55,55,55,55];if(!market.includes(n)&&!['Liu Bei','Guan Yu','Zhang Fei','Zhao Yun','Cao Cao','Xiahou Dun','Zhang Liao','Sima Yi','Sun Quan','Lu Meng','Zhou Yu','Lu Xun'].includes(n))market.push(n)}
+for(const n of Object.keys(HERO_TIERS)){if(!officerData[n])officerData[n]=[55,55,55,55];if(!market.includes(n)&&!['Liu Bei','Guan Yu','Zhang Fei','Zhao Yun','Cao Cao','Xiahou Dun','Zhang Liao','Sima Yi','Sun Quan','Cheng Pu','Zhou Yu','Lu Xun'].includes(n))market.push(n)}
 let inventory={0:[],1:[],2:[]},equipment={},foundTreasures=[];
 function treasureState(){return {cities,inventory,equipment,foundTreasures}}
 function saveTreasureState(st){inventory=st.inventory;equipment=st.equipment;foundTreasures=st.foundTreasures}
@@ -432,10 +432,27 @@ function bgmPlayNext(){
  updateClassicMusicVolume();
  classicBgm.play().catch(e=>musicStatus('Playback blocked: '+e.message));
 }
-classicBgm.addEventListener('ended',bgmPlayNext);
+classicBgm.loop=true; // Keep current track until its randomized turn interval ends.
 classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
 classicBgm.addEventListener('playing',()=>musicStatus('Playing backmusic'+bgmTrack+'.mp3'));
-function bgmObserveTurn(currentTurn){} // Playback is independent of game turns.
+let bgmLastObservedTurn=null;
+let bgmNextChangeTurn=null;
+function bgmRandomInterval(){return 3+Math.floor(Math.random()*3)}
+function bgmObserveTurn(currentTurn){
+ const t=Number(currentTurn);
+ if(!Number.isFinite(t))return;
+ if(bgmLastObservedTurn===null||t<bgmLastObservedTurn){
+  bgmLastObservedTurn=t;
+  bgmNextChangeTurn=t+bgmRandomInterval();
+  return;
+ }
+ if(t===bgmLastObservedTurn)return;
+ bgmLastObservedTurn=t;
+ if(t>=bgmNextChangeTurn){
+  bgmNextChangeTurn=t+bgmRandomInterval();
+  bgmPlayNext();
+ }
+}
 function musicTick(){}
 async function toggleMusic(){
  musicOn=!musicOn;updateClassicMusicVolume();$('bgm').textContent=musicOn?'♫ Music ON':'♫ Music OFF';
@@ -475,9 +492,11 @@ function playActionSound(action){
  }catch(e){a.volume=Math.min(1,sfxVolume*actionGain*1.30)}
  a.play().catch(()=>{});
 }
-function sfx(name){
+function sfx(name, volume=1){
+ const sfxGain=Number.isFinite(volume)?Math.max(0,volume):1;
+ const sfxTone=(freq,duration=.13,type='sine',gain=.075,delay=0)=>tone(freq,duration,type,gain*sfxGain,delay);
  if(ACTION_SFX_FILES[name]){playActionSound(name);return}
-if(name==='reject'){if(!soundOn)return;tone(330,.16,'triangle',.065);tone(220,.25,'triangle',.07,.16);return}if(name==='legendary'){for(let i=0;i<7;i++)tone([220,330,440,554,659,880,1108][i],.4,'triangle',.085,i*.16);tone(110,.9,'sawtooth',.045);return}if(name==='blue'){tone(540,.15,'sine',.045);tone(700,.18,'sine',.035,.13);return}if(name==='common'){tone(480,.10,'sine',.028);return}if(name==='hero'){for(let i=0;i<4;i++)tone([392,523,659,784][i],.25,'triangle',.065,i*.13);return}if(!soundOn)return;if(name==='attack'){for(let i=0;i<5;i++){tone(85+i*8,.17,'sawtooth',.035,i*.095);tone(180+i*43,.09,'square',.015,i*.095+.05)}return}if(name==='recruit'){for(let i=0;i<4;i++)tone(115,.14,'triangle',.045,i*.13);tone(523,.38,'sawtooth',.026,.26);return}if(name==='food'){for(let i=0;i<5;i++)tone(260+i*35,.055,'triangle',.026,i*.075);return}if(name==='farm'){for(let i=0;i<6;i++)tone(850+i*90,.08,'sine',.036,i*.065);return}let seq={recruit:[[392,0],[523,.12],[659,.24]],food:[[330,0],[440,.1],[554,.2]],farm:[[523,0],[659,.12]],fort:[[160,0],[120,.13]],train:[[440,0],[587,.12],[740,.24]],intel:[[650,0],[880,.1]],station:[[300,0],[500,.12]],hire:[[392,0],[523,.12],[784,.24]],move:[[260,0],[310,.1]],attack:[[130,0],[98,.13],[175,.26]],win:[[523,0],[659,.14],[784,.28],[1046,.43]],lose:[[330,0],[260,.2],[196,.4]],turn:[[440,0],[550,.12]]}[name]||[];for(let [f,d] of seq)tone(f,name==='attack'?.22:.15,name==='attack'||name==='fort'?'triangle':'sine',.07,d)}
+if(name==='reject'){if(!soundOn)return;sfxTone(330,.16,'triangle',.065);sfxTone(220,.25,'triangle',.07,.16);return}if(name==='legendary'){for(let i=0;i<7;i++)sfxTone([220,330,440,554,659,880,1108][i],.4,'triangle',.085,i*.16);sfxTone(110,.9,'sawtooth',.045);return}if(name==='blue'){sfxTone(540,.15,'sine',.045);sfxTone(700,.18,'sine',.035,.13);return}if(name==='common'){sfxTone(480,.10,'sine',.028);return}if(name==='hero'){for(let i=0;i<4;i++)sfxTone([392,523,659,784][i],.25,'triangle',.065,i*.13);return}if(!soundOn)return;if(name==='attack'){for(let i=0;i<5;i++){sfxTone(85+i*8,.17,'sawtooth',.035,i*.095);sfxTone(180+i*43,.09,'square',.015,i*.095+.05)}return}if(name==='recruit'){for(let i=0;i<4;i++)sfxTone(115,.14,'triangle',.045,i*.13);sfxTone(523,.38,'sawtooth',.026,.26);return}if(name==='food'){for(let i=0;i<5;i++)sfxTone(260+i*35,.055,'triangle',.026,i*.075);return}if(name==='farm'){for(let i=0;i<6;i++)sfxTone(850+i*90,.08,'sine',.036,i*.065);return}let seq={recruit:[[392,0],[523,.12],[659,.24]],food:[[330,0],[440,.1],[554,.2]],farm:[[523,0],[659,.12]],fort:[[160,0],[120,.13]],train:[[440,0],[587,.12],[740,.24]],intel:[[650,0],[880,.1]],station:[[300,0],[500,.12]],hire:[[392,0],[523,.12],[784,.24]],move:[[260,0],[310,.1]],attack:[[130,0],[98,.13],[175,.26]],win:[[523,0],[659,.14],[784,.28],[1046,.43]],lose:[[330,0],[260,.2],[196,.4]],turn:[[440,0],[550,.12]]}[name]||[];for(let [f,d] of seq)sfxTone(f,name==='attack'?.22:.15,name==='attack'||name==='fort'?'triangle':'sine',.07,d)}
 const $=id=>document.getElementById(id),neighbors=i=>edges.filter(e=>e.includes(i)).map(e=>e[0]===i?e[1]:e[0]);
 function renderPublicChronicle(){
  $('log').textContent='';
@@ -502,7 +521,7 @@ function publicAttack(a,b,heroes,won,repelled,rounds,oldOwner){
  const outcome=won?'The city was captured':repelled?'The attack was repelled; survivors returned to '+a.name:'The defenders held; survivors returned to '+a.name;
  publicEvent('⚔ '+intro+outcome+' ('+rounds+' rounds).');
 }
-function init(){inventory={0:[],1:[],2:[]};equipment={};foundTreasures=[];cities=defs.map((d,i)=>({id:i,name:d[0],x:d[1],y:d[2],owner:d[3],troops:STARTING_RESOURCES.troops[i],gold:STARTING_RESOURCES.gold[i],pool:Math.round((9500+((i*311)%3000))*.7),safety:600+((i*83)%450),commerce:300+((i*37)%150),harvest:750+((i*97)%450),food:STARTING_RESOURCES.food[i],morale:65,training:350,manpower:900,cohorts:null,officer:['Xiahou Dun','Cao Cao','Zhang Liao','Sima Yi','Zhang Fei','Liu Bei','Zhao Yun','Guan Yu','Sun Quan','Lu Meng','Zhou Yu','Lu Xun','Wei Yan','Xu Huang','Huang Gai'][i],used:false}));cities.forEach(c=>{c.officers=[c.officer];c.governor=c.officer;c.cohorts=[{lv:1,n:c.troops,hp:c.troops*100}];});turn=1;selected=5;mode='';over=false;logs=[];fallen=new Set();wandering={};discovered={};searchRolls={};searchCount={};harvestCooldown={};captives={};offerPrices={};lastAiHire={0:-10,2:-10};battleInbox=[];battleSerial=0;pendingBattlePopups=[];stationCooldown={};heroAP={};defenseTactics={};defenseFormations={};spyEffects={};scoutIntel={};stationChosen=[];lastHireFeedback=null;refreshInbox();wander();$('marketpanel').style.display='none';log('Liu Bei memulai perang penyatuan!');draw()}
+function init(){inventory={0:[],1:[],2:[]};equipment={};foundTreasures=[];cities=defs.map((d,i)=>({id:i,name:d[0],x:d[1],y:d[2],owner:d[3],troops:STARTING_RESOURCES.troops[i],gold:STARTING_RESOURCES.gold[i],pool:Math.round((9500+((i*311)%3000))*.7),safety:600+((i*83)%450),commerce:300+((i*37)%150),harvest:750+((i*97)%450),food:STARTING_RESOURCES.food[i],morale:65,training:350,manpower:900,cohorts:null,officer:['Xiahou Dun','Cao Cao','Zhang Liao','Sima Yi','Zhang Fei','Liu Bei','Zhao Yun','Guan Yu','Sun Quan','Cheng Pu','Zhou Yu','Lu Xun','Wei Yan','Xu Huang','Huang Gai'][i],used:false}));cities.forEach(c=>{c.officers=[c.officer];c.governor=c.officer;c.cohorts=[{lv:1,n:c.troops,hp:c.troops*100}];});turn=1;selected=5;mode='';over=false;logs=[];fallen=new Set();wandering={};discovered={};searchRolls={};searchCount={};harvestCooldown={};captives={};offerPrices={};lastAiHire={0:-10,2:-10};battleInbox=[];battleSerial=0;pendingBattlePopups=[];stationCooldown={};heroAP={};defenseTactics={};defenseFormations={};spyEffects={};scoutIntel={};stationChosen=[];lastHireFeedback=null;refreshInbox();wander();$('marketpanel').style.display='none';log('Liu Bei memulai perang penyatuan!');draw()}
 const UNIT={1:{atk:10,def:10,hp:100},2:{atk:12,def:12,hp:110},3:{atk:14,def:14,hp:120},4:{atk:16,def:16,hp:130},5:{atk:18,def:18,hp:140}};
 function trainingLevel(c){return c.training>=9000?5:c.training>=5000?4:c.training>=2500?3:c.training>=1000?2:1}
 function syncTroops(c){c.troops=c.cohorts.reduce((a,x)=>a+x.n,0)}
@@ -910,7 +929,7 @@ function check(){const owners=new Set(cities.map(c=>c.owner));if(owners.size!==1
   // Calculate each city's economy exactly once, including optional Auto Trade.
   for(const c of cities){const result=applyCityTurnEconomy(c);if(result.trade){autoTrades++;autoGold+=result.trade}}
   if(autoTrades)log('Auto Trade: '+autoTrades+' idle cities earned '+autoGold.toLocaleString()+' Gold.');
-  turn++;searchCount={};discovered={};searchRolls={};heroAP={};
+  turn++;bgmObserveTurn(turn);searchCount={};discovered={};searchRolls={};heroAP={};
   for(const n of Object.keys(stationCooldown))if(stationCooldown[n]>0)stationCooldown[n]--;
   wander();for(const c of cities){c.used=false;normalize(c)}
   log('Turn baru: city resources updated using the same net-change ledger shown in City Dashboard.');
