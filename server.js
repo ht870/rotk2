@@ -267,7 +267,7 @@ function rankedStat(c,weights){
  return regular.reduce((v,n,i)=>v+score(n)*Math.max(0,1-i*.1),0)+(gov?1.5*score(gov):0);
 }
 function officerStat(c,k){return rankedStat(c,[0,1,2,3].map(i=>i===k?1:0))}
-function statFor(c,type){return rankedStat(c,({recruit:[1,0,0,0],food:[0,0,0,1],farm:[0,0,.4,.6],train:[.6,.4,0,0],fort:[0,.6,0,.4],search:[0,0,.6,.4],hire:[0,0,.6,.4],commerce:[0,0,.4,.6],agriculture:[0,0,0,1],manpower:[.4,0,0,.6]})[type]||[0,0,0,0])}
+function statFor(c,type){return rankedStat(c,({recruit:[1,0,0,0],food:[0,0,0,1],farm:[0,0,.4,.6],train:[.6,.4,0,0],fort:[0,.6,0,.4],search:[0,0,.6,.4],hire:[0,0,.6,.4],commerce:[0,0,.4,.6],agriculture:[0,0,0,1],manpower:[.4,0,0,.6],publicSafety:[0,1,0,0]})[type]||[0,0,0,0])}
 function multiplier(score){return 1+2*Math.pow(score,2.0897)/(Math.pow(score,2.0897)+Math.pow(600,2.0897))}
 function actionMultiplier(c,type){return multiplier(statFor(c,type))}
 function priceFor(st,name,id){const key=name+'@'+id;if(st.offerPrices[key]==null){const stats=OFFICER_DATA[name]||[55,55,55,55];st.offerPrices[key]=Math.round(({C:300,B:600,A:1200,S:2100}[tier(name)]+3*stats.reduce((a,b)=>a+b,0))*(.4+Math.random()*1.2))}return st.offerPrices[key]}
@@ -300,7 +300,7 @@ function applyAction(r,side,owner,act){
  if(type==='farm'){n=Math.round(c.commerce*.44*actionMultiplier(c,'farm'));c.gold+=n;msg=c.name+' meningkatkan perdagangan (+'+n+' gold, INT bonus).'}
  else if(type==='food'){st.harvestCooldown??={};if((st.harvestCooldown[id]||0)>st.turn)throw Error('Harvest cooldown until turn '+st.harvestCooldown[id]);n=Math.round(c.harvest*actionMultiplier(c,'food'));c.food+=n;st.harvestCooldown[id]=st.turn+3;msg=c.name+' memanen '+n+' food (POL bonus).'}
  else if(type==='recruit'){if(c.gold<130)throw Error('Need 130 gold');n=Math.min(Math.floor(c.pool),Math.round(Math.max(1,c.manpower)*.85*actionMultiplier(c,'recruit')));if(n<1)throw Error('POOL exhausted');c.gold-=130;c.pool-=n;let level=c.training>=9000?5:c.training>=5000?4:c.training>=2500?3:c.training>=1000?2:1;mergeCohort(c,n,level);msg=c.name+' merekrut '+n+' prajurit (LDR bonus).'}
- else if(type==='fort'){if(c.gold<100)throw Error('Need 100 gold');c.gold-=100;c.safety+=Math.round(Math.max(1,c.safety)*.35*actionMultiplier(c,'fort'));msg='Fortified '+c.name}
+ else if(type==='fort'){if(c.gold<100)throw Error('Need 100 gold');c.gold-=100;c.safety+=Math.round(statFor(c,'publicSafety')*3);msg='Fortified '+c.name}
  else if(type==='train'){if(c.gold<90)throw Error('Need 90 gold');c.gold-=90;c.morale=Math.min(100,c.morale+25);c.training+=Math.round(Math.max(1,c.trainingBase||220)*actionMultiplier(c,'train'));msg='Trained '+c.name}
  else if(type==='intel'){throw Error('Scout removed in v2.6.1');const adjacent=EDGES.filter(e=>e.includes(id)).map(e=>st.cities[e[0]===id?e[1]:e[0]]).filter(t=>t.owner!==owner);if(!adjacent.length)throw Error('No neighboring enemy');const t=adjacent.sort((a,b)=>b.troops-a.troops)[0];msg='Intel '+c.name+': '+t.name+' has '+t.troops+' troops, morale '+t.morale+', food '+t.food+'.'}
  else if(type==='move'){const dst=Number(act.to),t=st.cities[dst];if(!Number.isInteger(dst)||!t||t.owner!==owner)throw Error('Invalid friendly destination');if(!EDGES.some(e=>e.includes(id)&&e.includes(dst)))throw Error('Not adjacent');n=Math.floor(c.troops*.5);if(n<1)throw Error('No troops');moveCohorts(c,t,n);msg='Moved '+n+' troops '+c.name+' → '+t.name}
@@ -543,6 +543,17 @@ http.createServer(async(req,res)=>{try{
  const v=q.get('version');if(v!==null&&Number(v)!==r.version)return reply(res,409,{error:'Version mismatch',currentVersion:r.version});
  const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic'),item:q.get('item')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready},bank:{...r.bank},sideDeadline:{...r.sideDeadline},displayDeadline:{...r.displayDeadline}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
  if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
+ // Lightweight, side-authenticated notification feed; no full game snapshot or turn wait.
+ if(req.method==='GET'&&u.pathname==='/api/notifications'){
+  const r=room(code);if(!r)return reply(res,404,{error:'Room not found'});
+  const side=u.searchParams.get('side');
+  if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});
+  requirePlayer(r,side,u.searchParams.get('token'));
+  const owner=SIDES.indexOf(side),st=r.state||{};
+  const battles=(st.battleInbox||[]).filter(x=>x&&x.data&&x.data.oldOwner===owner);
+  const incidents=(st.incidentInbox||[]).filter(x=>x&&x.owner===owner);
+  return reply(res,200,{ok:true,battles,incidents});
+ }
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){
   const b=await read(req),r=room(code);if(!r)return reply(res,404,{error:'Create room in lobby first'});
