@@ -410,6 +410,19 @@ http.createServer(async(req,res)=>{try{
   slot.kind='human';slot.token=token();slot.name=String(b.name||'Player').trim().slice(0,24)||'Player';r.version++;
   return reply(res,200,{...lobbyView(r,code),playerToken:slot.token,side:b.side});
  }
+ if(req.method==='POST'&&u.pathname==='/api/lobby/exit'){
+  const r=room(code),b=await read(req);if(!r)return reply(res,404,{error:'Room not found'});
+  if(r.started)return reply(res,409,{error:'Cannot exit a started game'});
+  const isHost=!!b.hostToken&&b.hostToken===r.hostToken;
+  const own=SIDES.find(s=>r.slots[s].kind==='human'&&r.slots[s].token&&r.slots[s].token===b.playerToken);
+  if(!isHost&&!own)return reply(res,403,{error:'Not a member of this room'});
+  if(own){r.slots[own]={kind:'open',name:null,token:null};r.version++}
+  if(isHost){const otherHumans=SIDES.some(s=>r.slots[s].kind==='human');if(!otherHumans){rooms.delete(code);return reply(res,200,{ok:true,closed:true})}
+    // A departing host relinquishes host controls. Remaining players keep their slots.
+    r.hostToken=token();r.version++;
+  }
+  return reply(res,200,{ok:true,closed:false});
+ }
  if(req.method==='POST'&&u.pathname==='/api/lobby/slot'){
   const r=room(code),b=await read(req);if(!r)return reply(res,404,{error:'Room not found'});
   if(r.started||b.hostToken!==r.hostToken)return reply(res,403,{error:'Host only, before start'});
