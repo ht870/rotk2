@@ -105,6 +105,33 @@ function autoAI(r){
     if(c.troops*.5<reserve||c.troops< t.troops*.65)continue;
     run({type:'move',city:c.id,to:t.id});
    }
+   // AI v4: two-ply strategic evaluation. No hidden information or free resources.
+   // Candidate conquest -> enemy's most dangerous adjacent counterattack.
+   const cityWorth=t=>{
+    const links=adjacentCities(t),hostile=links.filter(x=>x.owner!==owner).length;
+    const ownLinks=links.filter(x=>x.owner===owner).length;
+    const economic=Math.min(2.5,(t.commerce+t.harvest+t.manpower)/1600);
+    const officers=(t.officers||[]).reduce((v,n)=>v+heroValue(n)/250,0);
+    return 2.0+economic+Math.min(1.4,officers)+Math.min(1.5,ownLinks*.42)+Math.min(.8,hostile*.2);
+   };
+   const twoPlyRisk=(origin,target,sent)=>{
+    const reserve=Math.max(0,origin.troops-sent);
+    const reservePower=reserve*heroStrength(origin)*(.52+origin.morale*.0075);
+    const originEnemies=enemies(origin).filter(x=>x.id!==target.id);
+    const worstOrigin=originEnemies.reduce((v,e)=>Math.max(v,strength(e)),0);
+    // Occupied city is exposed to immediate enemy retaliation next turn.
+    const counter=adjacentCities(target).filter(x=>x.owner!==owner&&x.id!==origin.id&&x.id!==target.id)
+      .reduce((v,e)=>Math.max(v,strength(e)),0);
+    const capturePower=sent*.62*heroStrength(origin);
+    return Math.max(0,worstOrigin/Math.max(1,reservePower)-.7)*2.4
+      +Math.max(0,counter/Math.max(1,capturePower)-.85)*1.7;
+   };
+   const campaignPriority=t=>{
+    // Prefer cities that connect friendly territory and isolate enemy territory.
+    const friends=adjacentCities(t).filter(x=>x.owner===owner).length;
+    const foes=adjacentCities(t).filter(x=>x.owner===t.owner).length;
+    return Math.min(1.5,friends*.42)+Math.min(1.1,foes*.26);
+   };
    // Compare ALL adjacent battles by expected strategic value and risk, then re-plan after each action.
    // Hard guard against suicide attacks, and protect a reserve when the origin has multiple threats.
    const attacked=new Set();
@@ -122,17 +149,19 @@ function autoAI(r){
        const attack=sent*heroFactor*(.52+Math.min(100,c.morale)*.0075);
        const defense=strength(t);
        const ratio=attack/Math.max(1,defense);
-       if(ratio<1.32)continue;
-       const value=1.5+Math.min(2,(t.gold+t.food*.18)/11000)+(t.troops<2500?.45:0);
-       const safety=Math.min(2,ratio-1.0);
-       const risk=Math.max(0,originThreat/Math.max(1,(c.troops-sent)*heroFactor)-.65);
-       const score=value*1.2+safety*2.2-risk*1.4-enemySupport/110000-(pct===90?.12:0);
+       if(ratio<1.18)continue;
+       const value=cityWorth(t)+campaignPriority(t);
+       const safety=Math.min(2.2,ratio-1.0);
+       const risk=twoPlyRisk(c,t,sent);
+       const attrition=Math.min(2.5,1/Math.max(.3,ratio));
+       const score=value*1.15+safety*2.5-risk*1.9-attrition*.75
+         -enemySupport/110000-(pct===90?.2:0);
        plans.push({c,t,pct,food,heroes,score,ratio});
       }
      }
     }
     plans.sort((a,b)=>b.score-a.score);
-    const p=plans[0];if(!p||p.score<2.0)break;
+    const p=plans[0];if(!p||p.score<2.9)break;
     attacked.add(p.c.id+':'+p.t.id);
     if(!run({type:'attack',city:p.c.id,to:p.t.id,percent:p.pct,food:p.food,heroes:p.heroes,tactic:p.ratio>1.8?'assault':'siege'}))continue;
     if(st.over)break;
@@ -145,8 +174,8 @@ function autoAI(r){
     const add=(type,score,ok=true)=>{if(ok)choices.push({type,score})};
     const foodTurns=c.food/Math.max(1,c.troops*.08);
     add('food',foodTurns<2?12:foodTurns<4?8:foodTurns<8?4:0,harvestReady);
-    add('recruit',border?(risk>.85?10:7):3,c.gold>=130&&c.pool>=250&&c.troops<(border?21000:11000));
-    add('train',border?(c.morale<45?11:c.morale<65?8:c.morale<80?4:1):c.morale<55?5:1,c.gold>=90);
+    add('recruit',border?(risk>.75?12:8):c.troops<4500?7:3,c.gold>=130&&c.pool>=250&&c.troops<(border?24000:13000));
+    add('train',border?(c.morale<50?13:c.morale<70?10:c.morale<85?5:1):c.morale<60?7:1,c.gold>=90);
     add('fort',border&&risk>.9?7:1,c.gold>=100&&c.safety<15000);
     add('farm',c.gold<300?9:c.gold<800?5:2);
     choices.sort((a,b)=>b.score-a.score);
@@ -163,7 +192,7 @@ function autoAI(r){
      if((st.searchCount?.[c.id]||0)<1)run({type:'search',city:c.id});
     }
    }
-   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v3 planning complete'});
+   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 two-ply planning complete'});
   }
  }finally{r.aiBusy=false}
  if(SIDES.every(side=>r.ready[side]))startNextTurn(r);
