@@ -60,7 +60,7 @@ function startNextTurn(r){
   const now=Date.now();r.sideDeadline={};r.displayDeadline={};
   for(const side of SIDES){r.bank[side]=Math.max(0,(r.bank[side]??0))+r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}
   r.deadline=Math.max(now,...Object.values(r.sideDeadline));
- }else r.deadline=Date.now()+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));
+ }else {r.deadline=Date.now()+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}
  r.version++;
  r.log.push({phase:r.phase,side:'system',txt:'Turn '+st.turn+' started (server)'});
 }
@@ -553,7 +553,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};r.displayDeadline={};for(const side of SIDES){r.bank[side]=r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else r.deadline=now+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};r.displayDeadline={};for(const side of SIDES){r.bank[side]=r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else {r.deadline=now+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');if(!r.ready[b.side]){r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});
