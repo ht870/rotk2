@@ -4,6 +4,10 @@ const html=fs.readFileSync(path.join(__dirname,'index.html'));
 const lobbyHtml=fs.readFileSync(path.join(__dirname,'lobby.html'));
 const crypto=require('crypto');
 const rooms=new Map(),PORT=process.env.PORT||3000;
+// Shared public lobby: bounded in-memory chat, no account required.
+const lobbyChat=[];let lobbyChatSeq=0;const chatRate=new Map();
+function lobbyRoomList(){return [...rooms].filter(([,r])=>!r.stopped).map(([code,r])=>({code,started:!!r.started,mode:r.mode,players:SIDES.filter(s=>r.slots[s].kind==='human').length,open:SIDES.filter(s=>r.slots[s].kind==='open').length})).sort((a,b)=>Number(a.started)-Number(b.started)||b.players-a.players).slice(0,60)}
+
 const {runBattle}=require('./battle_engine');
 const TREASURE=require('./treasure_engine');
 const ROTK_ECONOMY=require('./economy_engine');
@@ -371,6 +375,23 @@ http.createServer(async(req,res)=>{try{
  if(req.method==='GET'&&u.pathname==='/treasure_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'treasure_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/economy_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'economy_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/classic'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}
+ if(req.method==='GET'&&u.pathname==='/api/lobby/community'){
+  const since=Math.max(0,Number(u.searchParams.get('since'))||0);
+  return reply(res,200,{ok:true,messages:lobbyChat.filter(m=>m.id>since),rooms:lobbyRoomList()});
+ }
+ if(req.method==='POST'&&u.pathname==='/api/lobby/chat'){
+  const b=await read(req),name=String(b.name||'Guest').trim().slice(0,24)||'Guest',message=String(b.message||'').trim().slice(0,280);
+  if(!message)return reply(res,400,{error:'Message is empty'});
+  const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();
+  const now=Date.now(),last=chatRate.get(ip)||0;
+  if(now-last<850)return reply(res,429,{error:'Wait a moment before sending again'});
+  chatRate.set(ip,now);if(chatRate.size>3000)for(const [k,v] of chatRate)if(now-v>60000)chatRate.delete(k);
+  const invite=String(b.invite||'').toUpperCase().trim();
+  if(invite&&(!/^[A-Z0-9_-]{1,12}$/.test(invite)||!rooms.has(invite)))return reply(res,400,{error:'Invalid room invite'});
+  const entry={id:++lobbyChatSeq,name,message,invite:invite||null,time:now};
+  lobbyChat.push(entry);if(lobbyChat.length>120)lobbyChat.shift();
+  return reply(res,200,{ok:true,entry});
+ }
  if(req.method==='POST'&&u.pathname==='/api/lobby/create'){
   if(room(code))return reply(res,409,{error:'Room code already exists'});
   const b=await read(req),mode=[20,60,180,300].includes(+b.mode)?+b.mode:300,r=createRoom(mode);

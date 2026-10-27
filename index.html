@@ -409,7 +409,7 @@ function showMarket(){
  $('marketlist').querySelectorAll('[data-persuade]').forEach(b=>b.onclick=()=>persuade(b.dataset.persuade,id));
 }
 
-function tone(freq,duration=.13,type='sine',gain=.075,delay=0){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(Math.min(.22,gain*(gain<=.024?musicVolume:sfxVolume)),t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02)}catch(e){}}
+function tone(freq,duration=.13,type='sine',gain=.075,delay=0){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(Math.min(.65,gain*(gain<=.024?musicVolume:sfxVolume)),t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02)}catch(e){}}
 let musicOn=true,musicTimer=null,musicStep=0;
 const BGM_COUNT=20;
 let bgmTrack=1+Math.floor(Math.random()*BGM_COUNT);
@@ -472,7 +472,7 @@ function getSfxAmplifierContext(){
  if(!Ctx)return null;
  try{sfxAmplifierContext=new Ctx();return sfxAmplifierContext}catch(e){return null}
 }
-function playActionSound(action){
+function playActionSound(action,volume=1){
  if(!soundOn)return;
  const sample=actionSoundCache[action];
  if(!sample)return;
@@ -485,17 +485,17 @@ function playActionSound(action){
    a.volume=1;
    const source=ctx.createMediaElementSource(a);
    const gain=ctx.createGain();
-   gain.gain.value=sfxVolume*actionGain*1.30;
+   gain.gain.value=sfxVolume*actionGain*1.30*volume;
    source.connect(gain);gain.connect(ctx.destination);
    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
-  }else{a.volume=Math.min(1,sfxVolume*actionGain*1.30)}
- }catch(e){a.volume=Math.min(1,sfxVolume*actionGain*1.30)}
+  }else{a.volume=Math.min(1,sfxVolume*actionGain*1.30*volume)}
+ }catch(e){a.volume=Math.min(1,sfxVolume*actionGain*1.30*volume)}
  a.play().catch(()=>{});
 }
-function sfx(name, volume=1){
+function sfx(name, volume=1.5){
  const sfxGain=Number.isFinite(volume)?Math.max(0,volume):1;
  const sfxTone=(freq,duration=.13,type='sine',gain=.075,delay=0)=>tone(freq,duration,type,gain*sfxGain,delay);
- if(ACTION_SFX_FILES[name]){playActionSound(name);return}
+ if(ACTION_SFX_FILES[name]){playActionSound(name,sfxGain);return}
 if(name==='reject'){if(!soundOn)return;sfxTone(330,.16,'triangle',.065);sfxTone(220,.25,'triangle',.07,.16);return}if(name==='legendary'){for(let i=0;i<7;i++)sfxTone([220,330,440,554,659,880,1108][i],.4,'triangle',.085,i*.16);sfxTone(110,.9,'sawtooth',.045);return}if(name==='blue'){sfxTone(540,.15,'sine',.045);sfxTone(700,.18,'sine',.035,.13);return}if(name==='common'){sfxTone(480,.10,'sine',.028);return}if(name==='hero'){for(let i=0;i<4;i++)sfxTone([392,523,659,784][i],.25,'triangle',.065,i*.13);return}if(!soundOn)return;if(name==='attack'){for(let i=0;i<5;i++){sfxTone(85+i*8,.17,'sawtooth',.035,i*.095);sfxTone(180+i*43,.09,'square',.015,i*.095+.05)}return}if(name==='recruit'){for(let i=0;i<4;i++)sfxTone(115,.14,'triangle',.045,i*.13);sfxTone(523,.38,'sawtooth',.026,.26);return}if(name==='food'){for(let i=0;i<5;i++)sfxTone(260+i*35,.055,'triangle',.026,i*.075);return}if(name==='farm'){for(let i=0;i<6;i++)sfxTone(850+i*90,.08,'sine',.036,i*.065);return}let seq={recruit:[[392,0],[523,.12],[659,.24]],food:[[330,0],[440,.1],[554,.2]],farm:[[523,0],[659,.12]],fort:[[160,0],[120,.13]],train:[[440,0],[587,.12],[740,.24]],intel:[[650,0],[880,.1]],station:[[300,0],[500,.12]],hire:[[392,0],[523,.12],[784,.24]],move:[[260,0],[310,.1]],attack:[[130,0],[98,.13],[175,.26]],win:[[523,0],[659,.14],[784,.28],[1046,.43]],lose:[[330,0],[260,.2],[196,.4]],turn:[[440,0],[550,.12]]}[name]||[];for(let [f,d] of seq)sfxTone(f,name==='attack'?.22:.15,name==='attack'||name==='fort'?'triangle':'sine',.07,d)}
 const $=id=>document.getElementById(id),neighbors=i=>edges.filter(e=>e.includes(i)).map(e=>e[0]===i?e[1]:e[0]);
 function renderPublicChronicle(){
