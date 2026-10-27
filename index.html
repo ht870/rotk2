@@ -311,7 +311,7 @@ header,.hudstats,.maptools,#cityPanel,#audioControls,#inboxButton,#gameBottomToo
  #cityPanel{width:min(560px,95vw)}
 }
 </style><style id="rotk-v3535-layout-only">
-/* Minimal layout changes on stable v3.5.48. Do not override city panel. */
+/* Minimal layout changes on stable v3.5.51. Do not override city panel. */
 .hudstats{display:flex;flex-wrap:wrap;column-gap:12px;row-gap:2px}
 .hudstats #onlineStatus{white-space:pre-line!important;flex:0 0 100%;display:block;color:#f3d38c;font-size:10px;font-weight:700;line-height:1.35;white-space:nowrap}
 #topRightActions{position:fixed;right:8px;top:8px;z-index:100;display:flex;align-items:center;justify-content:flex-end;gap:7px;zoom:.7}
@@ -323,7 +323,7 @@ header,.hudstats,.maptools,#cityPanel,#audioControls,#inboxButton,#gameBottomToo
  #topRightActions{top:5px;right:6px;gap:5px}
  #audioControls{top:auto!important;bottom:100px!important;right:7px!important}
 }
-</style><style id="rotk-v3545-ready">#onlineStatus .rotk-own-ready{color:#49df78!important;font-weight:800!important;text-shadow:0 0 5px #134d27}</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.5.48 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><div class="faction-banners" aria-label="Three Kingdoms factions"><div class="faction-banner wei"><span class="faction-emblem">魏</span><span>Wei</span></div><div class="faction-banner shu"><span class="faction-emblem">蜀</span><span>Shu</span></div><div class="faction-banner wu"><span class="faction-emblem">吳</span><span>Wu</span></div></div><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Three Kingdoms isometric map"></svg></div><div class="maptools"><button id="fullscreenToggle" type="button" aria-label="Toggle fullscreen">⛶ Full Screen</button></div><div id="gameBottomToolbar"><div class="toolbarPrimary"><button id="inventoryButton">🎒 Inventory</button><button id="end" style="background:#795b29">End Turn ▶</button></div><div class="toolbarSecondary"><button id="encyclopedia">📜 Hero Encyclopedia</button><button id="sound">🔊 Sound ON</button><button id="bgm">♫ Music ON</button></div></div></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Select a City</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="spyBottom">🥷 Espionage</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="stanceBottom">🛡 Defense Stance</button><span class="action-placeholder" aria-hidden="true"></span></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
+</style><style id="rotk-v3545-ready">#onlineStatus .rotk-own-ready{color:#49df78!important;font-weight:800!important;text-shadow:0 0 5px #134d27}</style></head><body><header><h1>⚔ THREE KINGDOMS — WARLORDS</h1><small>v3.5.51 · Treasure & Inventory · Multiplayer</small></header><div class="wrap"><section class="panel"><div class="stat hudstats"><b id="turn"></b><b id="status"></b></div><div id="mapViewport"><div class="faction-banners" aria-label="Three Kingdoms factions"><div class="faction-banner wei"><span class="faction-emblem">魏</span><span>Wei</span></div><div class="faction-banner shu"><span class="faction-emblem">蜀</span><span>Shu</span></div><div class="faction-banner wu"><span class="faction-emblem">吳</span><span>Wu</span></div></div><svg id="map" viewBox="0 0 760 490" preserveAspectRatio="xMidYMid meet" aria-label="Three Kingdoms isometric map"></svg></div><div class="maptools"><button id="fullscreenToggle" type="button" aria-label="Toggle fullscreen">⛶ Full Screen</button></div><div id="gameBottomToolbar"><div class="toolbarPrimary"><button id="inventoryButton">🎒 Inventory</button><button id="end" style="background:#795b29">End Turn ▶</button></div><div class="toolbarSecondary"><button id="encyclopedia">📜 Hero Encyclopedia</button><button id="sound">🔊 Sound ON</button><button id="bgm">♫ Music ON</button></div></div></section><aside class="panel" id="cityPanel"><button id="closeCity" class="closecity" aria-label="Close city panel">✕</button><h3 id="citytitle">Select a City</h3><div id="info"></div><div class="actions"><button id="farm">Commerce (+Gold)</button><button id="recruit">Recruit</button><button id="fort">Patrol (+Safety)</button><button id="attack">Attack →</button><button id="move">Transfer Troops →</button><button id="food">Harvest Food</button><button id="spyBottom">🥷 Espionage</button><button id="hire">🔎 Search Items & Officers</button><button id="station">Station Officer →</button><button id="stanceBottom">🛡 Defense Stance</button><span class="action-placeholder" aria-hidden="true"></span></div><p id="hint" class="muted"></p><div id="marketpanel" class="panel" style="display:none;margin-top:12px;background:#111827"><h3>Officer Search & Hire <button id="closemarket" style="float:right">✕</button></h3><p id="treasury"></p><p class="tip">Search cost discounted by INT/POL; INT/POL improves Search success. No wandering hero = 0%.</p><div id="marketlist"></div></div><details id="chronicle"><summary>War Chronicle</summary><div id="log"></div></details></aside></div>
 <div id="audioControls"><label>🔊 SFX <input id="sfxSlider" type="range" min="0" max="100" value="90" aria-label="SFX volume"></label><label>♫ Music <input id="musicSlider" type="range" min="0" max="100" value="50" aria-label="Music volume"></label></div><button id="inboxButton" title="Battle Inbox">✉ Inbox <span class="unread" id="inboxUnread"></span></button><div id="battleOverlay"><div id="battleBox"><h2 id="battleTitle"></h2><div id="battleBody"></div><div id="battleButtons" class="battlebuttons"></div></div></div><script src="/economy_engine.js"></script><script src="/treasure_engine.js"></script><script>
 (()=>{'use strict';
 const defs=[
@@ -457,33 +457,68 @@ function showMarket(){
 
 function tone(freq,duration=.13,type='sine',gain=.075,delay=0){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();let t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(Math.min(gain<=.024?.65:.95,gain*(gain<=.024?musicVolume:sfxVolume)),t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.02)}catch(e){}}
 let musicOn=true,musicTimer=null,musicStep=0;
-const BGM_COUNT=20;
-let bgmTrack=1+Math.floor(Math.random()*BGM_COUNT);
-const classicBgm=new Audio('/Music/backmusic'+bgmTrack+'.mp3');
+const BGM_COUNT=50; // Inclusive: backmusic1.mp3 through backmusic50.mp3.
+let bgmTrack=0;
+const classicBgm=new Audio();
 classicBgm.loop=false;
 classicBgm.preload='auto';
 classicBgm.playsInline=true;
-function bgmPickDifferentTrack(){
- let next=1+Math.floor(Math.random()*(BGM_COUNT-1));
- if(next>=bgmTrack)next++;
- return next;
+let bgmCandidates=[];
+function bgmShuffleCandidates(){
+ bgmCandidates=Array.from({length:BGM_COUNT},(_,i)=>i+1).filter(n=>n!==bgmTrack);
+ for(let i=bgmCandidates.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [bgmCandidates[i],bgmCandidates[j]]=[bgmCandidates[j],bgmCandidates[i]];
+ }
 }
+function bgmPickDifferentTrack(){
+ if(!bgmCandidates.length)bgmShuffleCandidates();
+ return bgmCandidates.pop();
+}
+let bgmTried=new Set();
+function bgmSetTrack(n){
+ bgmTrack=n;
+ classicBgm.src='/Music/backmusic'+n+'.mp3';
+ classicBgm.load();
+}
+function bgmTryNext(){
+ if(!musicOn||!soundOn)return;
+ if(bgmTried.size>=BGM_COUNT){
+  musicStatus('No available backmusic1–50.mp3 tracks found');
+  return;
+ }
+ let next=bgmPickDifferentTrack();
+ while(bgmTried.has(next)){
+  if(!bgmCandidates.length)bgmShuffleCandidates();
+  next=bgmCandidates.pop();
+ }
+ bgmTried.add(next);
+ bgmSetTrack(next);
+ updateClassicMusicVolume();
+ classicBgm.play().catch(e=>{
+  // Autoplay policy is not a missing file. Wait for the next user gesture.
+  if(e.name==='NotAllowedError'){bgmStartAttempted=false;musicStatus('Tap Music to enable audio')}
+  else if(classicBgm.error)bgmTryNext();
+ });
+}
+bgmShuffleCandidates();
+bgmTried.add(bgmPickDifferentTrack());
+bgmSetTrack([...bgmTried][0]);
 function updateClassicMusicVolume(){classicBgm.volume=soundOn&&musicOn?Math.min(1,musicVolume):0}
 function musicStatus(message){const b=$('bgm');if(b)b.title=message}
 function bgmPlayNext(){
- if(!musicOn||!soundOn)return;
- bgmTrack=bgmPickDifferentTrack();
- classicBgm.src='/Music/backmusic'+bgmTrack+'.mp3';
- classicBgm.load();
- updateClassicMusicVolume();
- classicBgm.play().catch(e=>{bgmStartAttempted=false;musicStatus('Tap Music to resume: '+e.message)});
+ bgmTried.clear();
+ bgmTryNext();
 }
-classicBgm.loop=true; // Keep current track until its randomized turn interval ends.
-classicBgm.addEventListener('error',()=>musicStatus('Missing audio: /Music/backmusic'+bgmTrack+'.mp3'));
+classicBgm.loop=true; // Keep selected music playing until the next 3–5-turn switch.
+classicBgm.addEventListener('error',()=>{
+ musicStatus('Missing backmusic'+bgmTrack+'.mp3; trying another track');
+ bgmTryNext();
+});
 classicBgm.addEventListener('playing',()=>musicStatus('Playing backmusic'+bgmTrack+'.mp3'));
 let bgmLastObservedTurn=null;
 let bgmNextChangeTurn=null;
-function bgmRandomInterval(){return 3+Math.floor(Math.random()*3)}
+function bgmRandomInterval(){return 2+Math.floor(Math.random()*2)}
 function bgmObserveTurn(currentTurn){
  const t=Number(currentTurn);
  if(!Number.isFinite(t))return;
@@ -544,10 +579,19 @@ function sfx(name, volume=3.825){
  if(ACTION_SFX_FILES[name]){playActionSound(name);return}
 if(name==='reject'){if(!soundOn)return;sfxTone(330,.16,'triangle',.065);sfxTone(220,.25,'triangle',.07,.16);return}if(name==='legendary'){for(let i=0;i<7;i++)sfxTone([220,330,440,554,659,880,1108][i],.4,'triangle',.085,i*.16);sfxTone(110,.9,'sawtooth',.045);return}if(name==='blue'){sfxTone(540,.15,'sine',.045);sfxTone(700,.18,'sine',.035,.13);return}if(name==='common'){sfxTone(480,.10,'sine',.028);return}if(name==='hero'){for(let i=0;i<4;i++)sfxTone([392,523,659,784][i],.25,'triangle',.065,i*.13);return}if(!soundOn)return;if(name==='attack'){for(let i=0;i<5;i++){sfxTone(85+i*8,.17,'sawtooth',.035,i*.095);sfxTone(180+i*43,.09,'square',.015,i*.095+.05)}return}if(name==='recruit'){for(let i=0;i<4;i++)sfxTone(115,.14,'triangle',.045,i*.13);sfxTone(523,.38,'sawtooth',.026,.26);return}if(name==='food'){for(let i=0;i<5;i++)sfxTone(260+i*35,.055,'triangle',.026,i*.075);return}if(name==='farm'){for(let i=0;i<6;i++)sfxTone(850+i*90,.08,'sine',.036,i*.065);return}let seq={recruit:[[392,0],[523,.12],[659,.24]],food:[[330,0],[440,.1],[554,.2]],farm:[[523,0],[659,.12]],fort:[[160,0],[120,.13]],train:[[440,0],[587,.12],[740,.24]],intel:[[650,0],[880,.1]],station:[[300,0],[500,.12]],hire:[[392,0],[523,.12],[784,.24]],move:[[260,0],[310,.1]],attack:[[130,0],[98,.13],[175,.26]],win:[[523,0],[659,.14],[784,.28],[1046,.43]],lose:[[330,0],[260,.2],[196,.4]],turn:[[440,0],[550,.12]]}[name]||[];for(let [f,d] of seq)sfxTone(f,name==='attack'?.22:.15,name==='attack'||name==='fort'?'triangle':'sine',.07,d)}
 const $=id=>document.getElementById(id),neighbors=i=>edges.filter(e=>e.includes(i)).map(e=>e[0]===i?e[1]:e[0]);
+// War Chronicle is public inter-faction news only. Never display domestic,
+ // officer, economy, troop movement, server sync, or AI internal activity.
+function isPublicWarEvent(entry){
+ if(typeof entry!=='string')return false;
+ const text=entry.replace(/^T\\d+\\s*[·:.-]\\s*/,'').trim();
+ return /^(?:⚔\\s*)?[^\\n]+\\((?:Wei|Shu|Wu)\\) attacked [^\\n]+\\((?:Wei|Shu|Wu)\\)/i.test(text)
+     || /^(?:🥷\\s*)?(?:Wei|Shu|Wu) conducted espionage in [^\\n]+\\((?:Wei|Shu|Wu)\\)/i.test(text);
+}
 function renderPublicChronicle(){
- $('log').textContent='';
- for(const entry of logs){
-  const row=document.createElement('div');row.textContent=entry;$('log').appendChild(row);
+ const container=$('log');
+ container.textContent='';
+ for(const entry of logs.filter(isPublicWarEvent)){
+  const row=document.createElement('div');row.textContent=entry;container.appendChild(row);
  }
 }
 function log(s){
@@ -556,6 +600,7 @@ function log(s){
  if(s==='Liu Bei memulai perang penyatuan!')publicEvent('Liu Bei (Shu) began the war of unification!');
 }
 function publicEvent(message){
+ if(!isPublicWarEvent('T'+turn+' · '+message))return;
  logs.unshift('T'+turn+' · '+message);
  logs=logs.slice(0,120);
  renderPublicChronicle();
@@ -1087,7 +1132,7 @@ const playerSide=['wei','shu','wu'].includes(qs.get('side'))?qs.get('side'):'shu
 let incidentInbox=[],pendingIncidentPopups=[];
 let netVersion=0,netPhase=1,netReady=false,netBusy=false,netApplying=false,netLast='',netQueued=false,netTurnPending=false,netDeadline=0,netSideDeadline=0,netEnded=false;
 function snapshot(){return {inventory,equipment,foundTreasures,cities,turn,over,logs,acted,fallen:[...fallen],wandering,discovered,searchRolls,searchCount,harvestCooldown,captives,offerPrices,lastAiHire,battleInbox,battleSerial,lastBattle,incidentInbox,chosenHeroes,persuadeCount,stationCooldown,heroAP,defenseTactics,defenseFormations,spyEffects,scoutIntel}}
-function applySnapshot(s){if(!s)return;netApplying=true;inventory=s.inventory||{0:[],1:[],2:[]};equipment=s.equipment||{};foundTreasures=s.foundTreasures||[];cities=s.cities;cities.forEach(c=>{if(!officers(c).includes(c.governor))c.governor=officers(c)[0]||null});turn=s.turn;bgmObserveTurn(turn);over=new Set(cities.map(c=>c.owner)).size===1;logs=s.logs||[];renderPublicChronicle();acted=s.acted;fallen=new Set(s.fallen||[]);wandering=s.wandering||{};discovered=s.discovered||{};searchRolls=s.searchRolls||{};searchCount=s.searchCount||{};harvestCooldown=s.harvestCooldown||{};captives=s.captives||{};offerPrices=s.offerPrices||{};lastAiHire=s.lastAiHire||{0:-10,2:-10};battleInbox=s.battleInbox||[];battleSerial=s.battleSerial||0;lastBattle=s.lastBattle||null;incidentInbox=s.incidentInbox||[];chosenHeroes=[];persuadeCount=s.persuadeCount||{};stationCooldown=s.stationCooldown||{};heroAP=s.heroAP||{};defenseTactics=s.defenseTactics||{};defenseFormations=s.defenseFormations||{};spyEffects=s.spyEffects||{};scoutIntel=s.scoutIntel||{};mode='';if(cities[selected]?.owner!==playerOwner)selected=cities.find(c=>c.owner===playerOwner)?.id||0;draw();netApplying=false;netLast=JSON.stringify(snapshot())}
+function applySnapshot(s){if(!s)return;netApplying=true;inventory=s.inventory||{0:[],1:[],2:[]};equipment=s.equipment||{};foundTreasures=s.foundTreasures||[];cities=s.cities;cities.forEach(c=>{if(!officers(c).includes(c.governor))c.governor=officers(c)[0]||null});turn=s.turn;bgmObserveTurn(turn);over=new Set(cities.map(c=>c.owner)).size===1;logs=(s.logs||[]).filter(isPublicWarEvent);renderPublicChronicle();acted=s.acted;fallen=new Set(s.fallen||[]);wandering=s.wandering||{};discovered=s.discovered||{};searchRolls=s.searchRolls||{};searchCount=s.searchCount||{};harvestCooldown=s.harvestCooldown||{};captives=s.captives||{};offerPrices=s.offerPrices||{};lastAiHire=s.lastAiHire||{0:-10,2:-10};battleInbox=s.battleInbox||[];battleSerial=s.battleSerial||0;lastBattle=s.lastBattle||null;incidentInbox=s.incidentInbox||[];chosenHeroes=[];persuadeCount=s.persuadeCount||{};stationCooldown=s.stationCooldown||{};heroAP=s.heroAP||{};defenseTactics=s.defenseTactics||{};defenseFormations=s.defenseFormations||{};spyEffects=s.spyEffects||{};scoutIntel=s.scoutIntel||{};mode='';if(cities[selected]?.owner!==playerOwner)selected=cities.find(c=>c.owner===playerOwner)?.id||0;draw();netApplying=false;netLast=JSON.stringify(snapshot())}
 async function req(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw Object.assign(Error(j.error||'Server error'),{response:j,status:r.status});return j}
 const endpoint='/api/state?code='+encodeURIComponent(roomCode);
 let netAllDeadlines={},netDisplayDeadlines={},netAllReady={},netAllBank={},netAccumulated=false;
