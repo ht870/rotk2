@@ -46,7 +46,7 @@ input,select,button{font-size:12px;padding:6px 7px;border-radius:5px}
 .roomitem.active{background:#1b3d52;border-radius:5px}
 @media(min-width:851px){.community.workspace{grid-template-columns:minmax(240px,1.05fr) minmax(245px,.9fr) minmax(340px,1.35fr)}.community.workspace:not(.has-room){grid-template-columns:minmax(300px,1fr) minmax(300px,1fr)} }
 </style></head><body><main>
-<header class="topbar"><h1>⚔ Three Kingdoms <small class="buildversion">v3.5.21</small></h1><span class="muted">Multiplayer lobby</span></header>
+<header class="topbar"><h1>⚔ Three Kingdoms <small class="buildversion">v3.5.23</small></h1><span class="muted">Multiplayer lobby</span></header>
 <div class="community workspace">
 <section class="panel chatpanel"><label class="playerlabel">Player Name <input id="name" maxlength="24" placeholder="Your name"></label><h2>💬 Lobby Chat</h2><div id="chatlog" class="chatlog" aria-live="polite"></div><form id="chatform" class="chatinput"><input id="chattext" maxlength="280" placeholder="Chat with players…" autocomplete="off" required><button type="submit">Send</button></form><div class="chatstatus" id="chatstatus"></div></section>
 <section class="panel roompanel"><h2>🏯 Create Room</h2><div class="createroom"><label>Room Code <input id="code" maxlength="12" placeholder="MYROOM"></label><label>Turn <select id="mode"><option value="20">20s</option><option value="60">60s</option><option value="180">3m</option><option value="300" selected>5m</option></select></label><button id="create">Create</button></div><div id="createhint" class="muted">One active room at a time.</div><h2 class="listheading">Available Rooms</h2><div id="roomlist" class="roomlist"></div></section>
