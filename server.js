@@ -415,7 +415,24 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='POST'&&u.pathname==='/api/lobby/exit'){
   const r=room(code),b=await read(req);if(!r)return reply(res,404,{error:'Room not found'});
-  if(r.started)return reply(res,409,{error:'Cannot exit a started game'});
+  if(r.started){
+   const own=SIDES.find(side=>r.slots[side].kind==='human'&&r.slots[side].token&&r.slots[side].token===b.playerToken);
+   if(!own)return reply(res,403,{error:'Not a member of this game'});
+   const surrender=b.surrender===true,leavingName=r.slots[own].name||own.toUpperCase();
+   r.slots[own]={kind:'ai',name:null,token:null};r.controllers[own]='ai';r.ready[own]=false;
+   if(b.hostToken&&b.hostToken===r.hostToken)r.hostToken=token();
+   r.version++;
+   const remaining=SIDES.filter(side=>r.slots[side].kind==='human');
+   const post=(message)=>{lobbyChat.push({id:++lobbyChatSeq,name:'SYSTEM',message,invite:null,time:Date.now()});if(lobbyChat.length>120)lobbyChat.shift()};
+   post('Room '+code+': '+leavingName+(surrender?' surrendered':' disconnected')+' from '+own.toUpperCase()+'.');
+   if(surrender&&remaining.length===1){
+    const victor=remaining[0],winner=r.slots[victor].name||victor.toUpperCase();
+    r.stopped=true;if(r.state)r.state.over=true;
+    post('Room '+code+': '+winner+' ('+victor.toUpperCase()+') has unified the empire! Victory by surrender.');
+    r.log.push({phase:r.phase,side:'system',txt:winner+' ('+victor.toUpperCase()+') wins by surrender'});
+   }else if(surrender&&remaining.length===0){r.stopped=true;if(r.state)r.state.over=true;post('Room '+code+': All human commanders have surrendered. The campaign has ended without a winner.')}
+   return reply(res,200,{ok:true,closed:false,surrender,gameEnded:!!r.stopped});
+  }
   const isHost=!!b.hostToken&&b.hostToken===r.hostToken;
   const own=SIDES.find(s=>r.slots[s].kind==='human'&&r.slots[s].token&&r.slots[s].token===b.playerToken);
   if(!isHost&&!own)return reply(res,403,{error:'Not a member of this room'});
