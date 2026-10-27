@@ -201,14 +201,23 @@ function autoAI(r){
      if((st.searchCount?.[c.id]||0)<1)run({type:'search',city:c.id});
     }
    }
-   if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,(r.sideDeadline[side]-Date.now())/1000);delete r.sideDeadline[side]}
+   stopFactionClock(r,side);
    r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 two-ply planning complete'});
   }
  }finally{r.aiBusy=false}
  if(SIDES.every(side=>r.ready[side]))startNextTurn(r);
 }
+function stopFactionClock(r,side,now=Date.now()){
+ if(r.ready[side])return;
+ if(r.accumulated){
+  const deadline=r.sideDeadline?.[side];
+  // Never grant a full-turn carry when a faction has no running deadline.
+  r.bank[side]=Number.isFinite(deadline)?Math.max(0,(deadline-now)/1000):0;
+  if(r.sideDeadline)delete r.sideDeadline[side];
+ }
+}
 function finishSide(r,side){
- if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,(r.sideDeadline[side]-Date.now())/1000);delete r.sideDeadline[side]}
+ stopFactionClock(r,side);
  r.ready[side]=true;
  const phaseBeforeAI=r.phase;
  autoAI(r);
@@ -518,7 +527,7 @@ http.createServer(async(req,res)=>{try{
  for(const act of parsed)messages.push(applyAction(copy,side,owner,act));
  }
  catch(e){return reply(res,409,{ok:false,error:e.message,rolledBack:true,version:r.version})}
- if(q.get('end')==='1'){copy.ready[side]=true;messages.push('End Turn '+side);finishSide(copy,side)}
+ if(q.get('end')==='1'){messages.push('End Turn '+side);finishSide(copy,side)}
  copy.version=Math.max(copy.version,r.version+1);
  copy.log.push(...messages.map(txt=>({phase:r.phase,side,txt})));
  rooms.set(code,copy);
@@ -533,7 +542,7 @@ http.createServer(async(req,res)=>{try{
  if(req.method==='GET'&&u.pathname==='/api/action'){let r=room(code),q=u.searchParams;if(!r)return reply(res,404,{error:'Room not found'});requirePlayer(r,q.get('side'),q.get('token'));advance(r);if(r.stopped||r.pendingTurn||!r.state)return reply(res,409,{error:'Room not active or awaiting turn transition'});let side=q.get('side'),owner=SIDES.indexOf(side);if(owner<0)return reply(res,400,{error:'Invalid side'});if(r.ready[side])return reply(res,409,{error:'Side already ended turn'});
  const v=q.get('version');if(v!==null&&Number(v)!==r.version)return reply(res,409,{error:'Version mismatch',currentVersion:r.version});
  const act={type:q.get('type'),city:q.get('city'),from:q.get('from'),to:q.get('to'),name:q.get('name'),percent:q.get('percent')==null?undefined:Number(q.get('percent')),gold:q.get('gold')==null?undefined:Number(q.get('gold')),food:q.get('food')==null?undefined:Number(q.get('food')),heroes:q.get('heroes')?.split('|'),hero:q.get('hero'),operation:q.get('operation'),tactic:q.get('tactic'),defenderTactic:q.get('defenderTactic'),item:q.get('item')};try{const copy={...r,state:JSON.parse(JSON.stringify(r.state)),log:[...r.log],ready:{...r.ready},bank:{...r.bank},sideDeadline:{...r.sideDeadline},displayDeadline:{...r.displayDeadline}};const msg=applyAction(copy,side,owner,act);syncVictory(copy.state);copy.version++;copy.log.push({phase:r.phase,side,txt:msg});rooms.set(code,copy);return reply(res,200,{ok:true,action:msg,...view(copy)})}catch(e){return reply(res,409,{error:e.message,rolledBack:true,version:r.version})}}
- if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
+ if(req.method==='GET'&&u.pathname==='/api/end-turn'){let r=room(code),side=u.searchParams.get('side');if(!r||r.stopped)return reply(res,404,{error:'Active room not found'});if(!r.state)return reply(res,409,{error:'Room not initialized'});if(!SIDES.includes(side))return reply(res,400,{error:'Invalid side'});requirePlayer(r,side,u.searchParams.get('token'));advance(r);if(!r.ready[side]){r.log.push({phase:r.phase,side,txt:'End Turn'});finishSide(r,side)}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='GET'&&u.pathname==='/api/state'){let r=room(code);if(!r)return reply(res,404,{error:'Room not found'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/join'){
   const b=await read(req),r=room(code);if(!r)return reply(res,404,{error:'Create room in lobby first'});
