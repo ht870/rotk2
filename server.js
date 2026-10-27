@@ -201,15 +201,19 @@ function autoAI(r){
      if((st.searchCount?.[c.id]||0)<1)run({type:'search',city:c.id});
     }
    }
-   if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,Math.ceil((r.sideDeadline[side]-Date.now())/1000));delete r.sideDeadline[side]}
+   if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,(r.sideDeadline[side]-Date.now())/1000);delete r.sideDeadline[side]}
    r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 two-ply planning complete'});
   }
  }finally{r.aiBusy=false}
  if(SIDES.every(side=>r.ready[side]))startNextTurn(r);
 }
 function finishSide(r,side){
- if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,Math.ceil((r.sideDeadline[side]-Date.now())/1000));delete r.sideDeadline[side]}
- r.ready[side]=true;autoAI(r);if(SIDES.every(s=>r.ready[s]))startNextTurn(r)}
+ if(r.accumulated&&r.sideDeadline?.[side]){r.bank[side]=Math.max(0,(r.sideDeadline[side]-Date.now())/1000);delete r.sideDeadline[side]}
+ r.ready[side]=true;
+ const phaseBeforeAI=r.phase;
+ autoAI(r);
+ // autoAI may already have advanced the turn. Never advance the same turn twice.
+ if(r.phase===phaseBeforeAI&&SIDES.every(s=>r.ready[s]))startNextTurn(r)}
 
 function advance(r){
  if(r.stopped||!r.state||!r.started)return;
