@@ -55,7 +55,7 @@ function startNextTurn(r){
  for(const c of st.cities){ensureGovernor(c);const result=ROTK_ECONOMY.apply(c,ctx);if(result.trade){trades++;totalTrade+=result.trade}c.used=false}
  if(trades)(st.logs||(st.logs=[])).unshift('Auto Trade: '+trades+' idle cities earned '+totalTrade+' Gold.');
  (st.logs||(st.logs=[])).unshift('T'+st.turn+' · Server advanced turn with officer development multipliers.');
- r.phase++;r.ready={wei:false,shu:false,wu:false};r.pendingTurn=false;
+ r.phase++;r.ready=Object.fromEntries(SIDES.map(side=>[side,r.controllers[side]==='surrendered']));r.pendingTurn=false;
  r.deadline=Date.now()+r.mode*1000;r.version++;
  r.log.push({phase:r.phase,side:'system',txt:'Turn '+st.turn+' started (server)'});
 }
@@ -393,7 +393,7 @@ http.createServer(async(req,res)=>{try{
   return reply(res,200,{ok:true,entry});
  }
  if(req.method==='POST'&&u.pathname==='/api/lobby/create'){
-  if(room(code))return reply(res,409,{error:'Room code already exists'});
+  if(room(code))return reply(res,409,{error:'Room name is being used. Please choose another room name.'});
   const b=await read(req),mode=[20,60,180,300].includes(+b.mode)?+b.mode:300,r=createRoom(mode);
   rooms.set(code,r);return reply(res,200,{...lobbyView(r,code),hostToken:r.hostToken});
  }
@@ -419,18 +419,27 @@ http.createServer(async(req,res)=>{try{
    const own=SIDES.find(side=>r.slots[side].kind==='human'&&r.slots[side].token&&r.slots[side].token===b.playerToken);
    if(!own)return reply(res,403,{error:'Not a member of this game'});
    const surrender=b.surrender===true,leavingName=r.slots[own].name||own.toUpperCase();
-   r.slots[own]={kind:'ai',name:null,token:null};r.controllers[own]='ai';r.ready[own]=false;
+   r.slots[own]={kind:surrender?'surrendered':'ai',name:null,token:null};
+   r.controllers[own]=surrender?'surrendered':'ai';
+   r.ready[own]=surrender;
    if(b.hostToken&&b.hostToken===r.hostToken)r.hostToken=token();
    r.version++;
    const remaining=SIDES.filter(side=>r.slots[side].kind==='human');
+   const activeAI=SIDES.filter(side=>r.controllers[side]==='ai');
    const post=(message)=>{lobbyChat.push({id:++lobbyChatSeq,name:'SYSTEM',message,invite:null,time:Date.now()});if(lobbyChat.length>120)lobbyChat.shift()};
-   post('Room '+code+': '+leavingName+(surrender?' surrendered':' disconnected')+' from '+own.toUpperCase()+'.');
-   if(surrender&&remaining.length===1){
+   const notice='Room '+code+': '+leavingName+' ('+own.toUpperCase()+') '+(surrender?'has surrendered!':'has exited; AI has taken control.');
+   post(notice);r.log.push({phase:r.phase,side:'system',txt:notice});
+   if(surrender&&remaining.length===1&&activeAI.length===0){
     const victor=remaining[0],winner=r.slots[victor].name||victor.toUpperCase();
     r.stopped=true;if(r.state)r.state.over=true;
-    post('Room '+code+': '+winner+' ('+victor.toUpperCase()+') has unified the empire! Victory by surrender.');
-    r.log.push({phase:r.phase,side:'system',txt:winner+' ('+victor.toUpperCase()+') wins by surrender'});
-   }else if(surrender&&remaining.length===0){r.stopped=true;if(r.state)r.state.over=true;post('Room '+code+': All human commanders have surrendered. The campaign has ended without a winner.')}
+    const victory='Room '+code+': '+winner+' ('+victor.toUpperCase()+') has unified the empire! Victory by surrender.';
+    post(victory);r.log.push({phase:r.phase,side:'system',txt:victory});
+   }else if(surrender&&remaining.length===0&&activeAI.length===0){
+    r.stopped=true;if(r.state)r.state.over=true;post('Room '+code+': All commanders surrendered. Campaign ended.');
+   }else if(!r.stopped&&r.state){
+    // A surrendered faction must never hold up the turn clock.
+    autoAI(r);
+   }
    return reply(res,200,{ok:true,closed:false,surrender,gameEnded:!!r.stopped});
   }
   const isHost=!!b.hostToken&&b.hostToken===r.hostToken;
