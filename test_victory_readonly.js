@@ -1,0 +1,10 @@
+const fs=require('fs'),assert=require('assert');
+const server=fs.readFileSync('server.js','utf8'),ui=fs.readFileSync('index.html','utf8');
+assert(server.includes('||r.state.over)return;'));
+assert(server.includes('||r.state.over||r.pendingTurn'));
+assert(server.includes('||r.state?.over)throw Error'));
+assert(ui.includes("if(!netReady||!(netEnded||over))return;"));
+assert(ui.includes("button.closest('#battleOverlay')"));
+assert(ui.includes("if(over){netEnded=true;updateEndTurnButton(true);"));
+assert(ui.includes("if(over){banner('VICTORY"));
+console.log('Victory read-only guards: PASS');

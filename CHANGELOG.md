@@ -1,3 +1,15 @@
+## v4.0.5 — Starvation morale
+- Food shortage independently reduces morale by 3 each battle round.
+- Battle casualty morale remains capped at 5 before formation modifiers.
+- Encirclement multiplies both components by 1.5 in client battle simulation.
+- Removed previous 2x shortage multiplier.
+- Battle report labels shortage as +3 starvation rather than 2x.
+
+## v4.0.3-full-hp
+- Reset both participating armies to full HP at battle start; no HP reset between rounds.
+- Discard temporary battle wounds after resolution; retain existing troop loss/recovery mechanics.
+- Add fresh-HP regression tests.
+
 # Changelog
 
 ## v3.0.1 — Cleanup
@@ -31,7 +43,7 @@ Older detailed release notes are intentionally excluded from the deployment pack
 - Existing AI, treasure and duel smoke tests pass.
 - End Turn Turn-49 root cause not yet proven; long-match tests pending.
 
-## v4.0.2-grandmaster
+## v4.0.3-full-hp
 - Added pure public-board strategic planner (`grandmaster_ai.js`) for threat assessment, defensive reserves, connected-territory target ranking and reinforcement selection.
 - Integrated with existing legal server-side AI action flow; no resource bonuses or hidden opponent state.
 - Added `test_grandmaster_ai.js`; retained previous regression tests.

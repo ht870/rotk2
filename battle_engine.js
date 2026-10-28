@@ -1,5 +1,7 @@
+const {moraleLoss}=require('./morale_rules');
 const {OFFICER_DATA,HERO_TIERS}=require('./game_data');
 const TREASURE=require('./treasure_engine');
+const {freshBattleHP}=require('./battle_hp');
 // Exact combat functions extracted from classic client; no simplified combat replacement.
 const officerData=new Proxy(OFFICER_DATA,{get(target,key){const base=target[key];return Array.isArray(base)?TREASURE.stats(currentBattleState||{cities:[]},key,base):base}});
 let currentBattleState=null;
@@ -82,6 +84,10 @@ function heroEffects(heroes,round,side,ownN=0,enemyN=0){let dmg=1,guard=1,events
  return {dmg,guard,heal,events};
 }
 function simulateBattle(src,dst,attHeroes,ai=false,expedition=null){let a=cities[src],b=cities[dst],originBefore={troops:a.troops,pool:a.pool},targetBefore={troops:b.troops,pool:b.pool},sent=expedition?expedition.sent:Math.floor(a.troops*.82),atkArmy=expedition?detachPercent(a,expedition.percent):detach(a,sent),defArmy=b.cohorts.map(x=>({...x})),battleLog=[],oldOwner=b.owner,originalAtk=sent,originalDef=b.troops,defHeroes=battleHeroes(b,true),maxRounds=8;
+// Both sides enter EVERY battle at full HP, including repeat battles.
+// This happens once per battle, never between combat rounds.
+freshBattleHP(atkArmy);
+freshBattleHP(defArmy);
 let tacticalMoraleA=Math.min(100,Math.max(0,a.morale||65)),tacticalMoraleD=Math.min(100,Math.max(0,(b.morale||65)+(attackerTactic==='ambush'?-7:0)+(defenderTactic==='counter'?10:0)));
 const sabotage=st.spyEffects?.[dst]?.sabotage,spyDefenseFactor=sabotage&&sabotage.until>=turn?.75:1;
 const fortMultiplier=attackerTactic==='siege'?0:defenderTactic==='fortify'?2:1;
@@ -94,7 +100,7 @@ let warGold=expedition?expedition.gold:Math.floor(a.gold*.8),warFood=expedition?
 for(let r=1;r<=maxRounds;r++){if(atkArmy.every(c=>!c.n)||defArmy.every(c=>!c.n))break;if(tacticalMoraleA<=15||tacticalMoraleD<=15||atkArmy.reduce((v,z)=>v+z.n,0)<=originalAtk*.15||defArmy.reduce((v,z)=>v+z.n,0)<=originalDef*.15)break;let duels=resolveRoundDuels(attHeroes,defHeroes,attackerTactic,defenderTactic,r);tacticalMoraleA=Math.max(0,tacticalMoraleA-duels.moralePenaltyA);tacticalMoraleD=Math.max(0,tacticalMoraleD-duels.moralePenaltyD);let na=atkArmy.reduce((v,z)=>v+z.n,0),nd=defArmy.reduce((v,z)=>v+z.n,0),needA=Math.ceil(na*.03),needD=Math.ceil(nd*.03),shortageA=warFood<needA,shortageD=b.food<needD;let spent=Math.min(warFood,needA),spentD=Math.min(b.food,needD);warFood-=spent;b.food-=spentD;foodSpent+=spent;let x=armyStats(atkArmy,attHeroes),y=armyStats(defArmy,defHeroes,true,effectiveSafety),fx=heroEffects(attHeroes,r,'attacker',x.n,y.n),fy=heroEffects(defHeroes,r,'defender',y.n,x.n);if(x.n===0||y.n===0)break;
 let critA=Math.random()<x.crit?1.35:1,critB=Math.random()<y.crit?1.35:1;
 let effectiveYDef=Math.max(.01,y.def-(y.def/(1+y.totals[0]/300+effectiveSafety/10000))*defensePenalty);let dmgA=x.atk*(1+((moraleMult(tacticalMoraleA)-1)/(1+x.totals[1]/300)))*1.05*(12/(12+effectiveYDef))*fx.dmg*fy.guard*critA*(warFood>0?1:.75),dmgB=y.atk*(1+(moraleMult(tacticalMoraleD)-1)/(1+y.totals[1]/300))*1.05*(12/(12+x.def))*fy.dmg*fx.guard*critB;
-let lossD=takeDamage(defArmy,dmgA),lossA=takeDamage(atkArmy,dmgB);let moraleLossA=Math.min(5,25*lossA/Math.max(1,x.n))*(shortageA?2:1),moraleLossD=Math.min(5,25*lossD/Math.max(1,y.n))*(shortageD?2:1);tacticalMoraleA=Math.max(0,tacticalMoraleA-moraleLossA);tacticalMoraleD=Math.max(0,tacticalMoraleD-moraleLossD);
+let lossD=takeDamage(defArmy,dmgA),lossA=takeDamage(atkArmy,dmgB);let moraleLossA=moraleLoss(lossA,x.n,shortageA).total,moraleLossD=moraleLoss(lossD,y.n,shortageD).total;tacticalMoraleA=Math.max(0,tacticalMoraleA-moraleLossA);tacticalMoraleD=Math.max(0,tacticalMoraleD-moraleLossD);
 for(const [army,st] of [[atkArmy,x],[defArmy,y]]){let recover=army.reduce((s,c)=>s+c.n*UNIT[c.lv].hp-c.hp,0)*(st.heal+(army===atkArmy?fx.heal:fy.heal));let remaining=recover;for(const c of army){let gap=c.n*UNIT[c.lv].hp-c.hp,add=Math.min(gap,remaining);c.hp+=add;remaining-=add}}
 battleLog.push({r,shortageA,shortageD,moraleLossA,moraleLossD,foodUsedA:spent,foodUsedD:spentD,atk:Math.round(dmgA),def:Math.round(dmgB),lossA,lossD,moraleA:tacticalMoraleA,moraleD:tacticalMoraleD,remainA:atkArmy.reduce((s,z)=>s+z.n,0),remainD:defArmy.reduce((s,z)=>s+z.n,0),eventsA:fx.events.filter(e=>{let key=e.split(' (Passive)')[0].replace(/^🟣 /,'');if(shownSkillA.has(key))return false;shownSkillA.add(key);return true}),eventsD:fy.events.filter(e=>{let key=e.split(' (Passive)')[0].replace(/^🟣 /,'');if(shownSkillD.has(key))return false;shownSkillD.add(key);return true}),events:[...duels.events,...fx.events,...fy.events,critA>1?'🧠 Attacker tactical critical!':'',critB>1?'🧠 Defender tactical critical!':''].filter(Boolean)});
 if(!battleLog.at(-1).remainA||!battleLog.at(-1).remainD)break;
@@ -142,6 +148,9 @@ function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,he
  if(!Number.isInteger(food)||food<Math.ceil(sent*.03)*8||food>a.food)throw Error('Insufficient expedition food');
  if(!Array.isArray(heroes)||heroes.length<1||heroes.length>3||new Set(heroes).size!==heroes.length||heroes.some(n=>!a.officers.includes(n)))throw Error('Invalid selected heroes');
  const won=simulateBattle(src,dst,heroes,false,{percent,sent,gold,food});
+ // Persist soldier counts/levels only; discard temporary battle wounds.
+ freshBattleHP(a.cohorts);
+ freshBattleHP(b.cohorts);
  st.logs=logs;st.captives=captives;st.wandering=wandering;st.battleInbox=battleInbox;st.battleSerial=battleSerial;st.lastBattle=lastBattle;
  return {won,report:lastBattle};
 }
