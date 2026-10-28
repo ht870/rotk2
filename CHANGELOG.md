@@ -1,4 +1,12 @@
-## v4.0.5 — Starvation morale
+## v4.0.6 — Attacker routing outcomes
+- Preserve 3x capture threshold.
+- Failed attack with attacker survivors >= 1.5x defender survivors: repelled/stalemate, 20% routed, no item loss.
+- Other failed attacks: attacker routed, 80% routed, existing item loss.
+- Routed survivors use existing loser 30/70 troops/pool split; non-routed survivors return active.
+- Casualty recovery remains separate and unchanged.
+- Rename battle report Demoralized to Routed.
+
+## v4.0.6 — Starvation morale
 - Food shortage independently reduces morale by 3 each battle round.
 - Battle casualty morale remains capped at 5 before formation modifiers.
 - Encirclement multiplies both components by 1.5 in client battle simulation.

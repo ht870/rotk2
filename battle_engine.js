@@ -109,20 +109,29 @@ let survivorsA=atkArmy.reduce((s,x)=>s+x.n,0),survivorsD=defArmy.reduce((s,x)=>s
 let attackerRout=tacticalMoraleA<=15||survivorsA<=originalAtk*.15,defenderRout=tacticalMoraleD<=15||survivorsD<=originalDef*.15;
 let won=defenderRout&&!attackerRout?true:attackerRout?false:survivorsD===0?true:survivorsA>=3*survivorsD;
 let resolution=defenderRout&&!attackerRout?'Defender rout':attackerRout?'Attacker rout':won?'3x superiority':survivorsD>=3*survivorsA?'Defender victory (3x superiority)':'Attack repelled — stalemate (no 3x superiority)';
-let repelled=!won&&!attackerRout&&survivorsA>0&&survivorsD<3*survivorsA;
+let repelled=!won&&survivorsA>=1.5*survivorsD;
+let attackerOutcome=won?'attacker_victory':repelled?'attacker_repelled':'attacker_routed';
 a.morale=Math.max(25,a.morale-9);b.morale=Math.max(25,b.morale-7);
 let casualtyRate=((originalAtk-survivorsA)+(originalDef-survivorsD))/Math.max(1,originalAtk+originalDef);let roundFactor=Math.min(1,(battleLog.length-1)/9);let brutality=Math.max(.10,Math.min(.35,.10+.15*casualtyRate+.10*roundFactor));
 let recoverable=1-2*brutality;
 const split=(loss,isWinner)=>{let recovered=Math.floor(Math.max(0,loss)*recoverable),troops=Math.floor(recovered*(isWinner?.6:.3));return {troops,pool:recovered-troops,lost:Math.max(0,loss)-recovered}};
 let aLoss=originalAtk-survivorsA,dLoss=originalDef-survivorsD;
-let demoralizedA=won?0:survivorsA,demoralizedD=won?survivorsD:0;
+// Routing affects only surviving soldiers. Casualty recovery stays independent.
+let routedA=won?0:Math.floor(survivorsA*(repelled?.20:.80));
+let routedD=won?survivorsD:0;
 let aRec=split(aLoss,won),dRec=split(dLoss,!won);
-// Demoralized remaining troops are recoverable, not additional casualties.
-// Reuse the existing winner/loser troop-vs-pool ratio (60/40 or 30/70).
-const distributeDemoralized=(rec,demoralized,isWinner)=>{let recovered=rec.troops+rec.pool+demoralized;rec.troops=Math.floor(recovered*(isWinner?.6:.3));rec.pool=recovered-rec.troops;rec.demoralized=demoralized;return rec};
-distributeDemoralized(aRec,demoralizedA,won);
-distributeDemoralized(dRec,demoralizedD,!won);
-if(aRec.troops+aRec.pool!==aLoss+demoralizedA-aRec.lost||dRec.troops+dRec.pool!==dLoss+demoralizedD-dRec.lost)throw Error('Battle troop conservation invariant violated');
+const distributeRouted=(rec,routed,isWinner)=>{
+  const troops=Math.floor(routed*(isWinner?.6:.3));
+  rec.troops+=troops;rec.pool+=routed-troops;
+  rec.routed=routed;rec.demoralized=routed;return rec;
+};
+aRec.activeSurvivors=won?0:survivorsA-routedA;
+distributeRouted(aRec,routedA,won);
+distributeRouted(dRec,routedD,!won);
+// Non-routed attacker survivors return to the source city directly.
+const activeSurvivorsA=won?0:survivorsA-routedA;
+if(!won)aRec.troops+=activeSurvivorsA;
+if(aRec.troops+aRec.pool!==aLoss+(won?0:survivorsA)-aRec.lost||dRec.troops+dRec.pool!==dLoss+routedD-dRec.lost)throw Error('Battle troop conservation invariant violated');
 let lootGold=0,lootFood=0;
 // Winner receives remaining supplies of defeated force; attacker victory captures city's stored resources.
 if(won){let old=b.owner,marching=attHeroes.slice(),defending=officers(b).slice(),retreat=cities.filter(x=>x.owner===old&&x.id!==b.id).sort((x,y)=>y.troops-x.troops)[0];
@@ -134,9 +143,9 @@ a.pool+=aRec.pool;addTroops(a,aRec.troops,trainingLevel(a));
 b.pool+=dRec.pool;addTroops(b,dRec.troops,trainingLevel(b));
 for(const k of ['commerce','harvest','manpower','safety','training'])if(b[k]!=null)b[k]=Math.round(b[k]*(1-brutality));
 for(const n of defending){if(Math.random()<captureChance(n)){captives[n]=a.owner;log('⛓ '+n+' captured!')}else if(retreat){retreat.officers.push(n)}else{wandering[n]=Math.floor(Math.random()*cities.length)}}if(retreat){retreat.officer=retreat.officers[0]||'None';}a.officers=officers(a).filter(n=>!marching.includes(n));a.officer=a.officers[0]||'None';b.officers=marching;b.officer=marching[0]||'None';log('🏆 '+a.name+' captured '+b.name+' after '+battleLog.length+' rounds!')
-}else{b.cohorts=defArmy.filter(x=>x.n>0);syncTroops(b);addTroops(a,aRec.troops,trainingLevel(a));a.pool+=aRec.pool;addTroops(b,dRec.troops,trainingLevel(b));b.pool+=dRec.pool;lootGold=repelled?0:warGold;lootFood=repelled?0:warFood;if(repelled){a.gold+=warGold;a.food+=warFood}else{b.gold+=warGold;b.food+=warFood}for(const k of ['commerce','harvest','manpower','safety','training'])if(b[k]!=null)b[k]=Math.round(b[k]*(1-brutality));for(const n of repelled?[]:attHeroes){if(!officers(a).includes(n))continue;if(Math.random()<captureChance(n)){a.officers=a.officers.filter(x=>x!==n);captives[n]=b.owner;log('⛓ '+n+' captured after failed attack!')}}a.officer=a.officers[0]||'None';if(!a.officers.includes(a.governor))a.governor=a.officers[0]||null;log((repelled?'↩ Attack repelled; survivors returned to ':'🛡 '+b.name+' defended against ')+a.name+' ('+battleLog.length+' rounds).')}
-const losingHeroes=won?defHeroes:attHeroes;const winningHeroes=won?attHeroes:defHeroes;const itemsAcquired=TREASURE.dropAndLoot(st,losingHeroes,won?a.owner:b.owner,winningHeroes);
-lastBattle={itemsAcquired,capturedHeroes:Object.keys(captives).filter(n=>losingHeroes.includes(n)),repelled,setup,tactics:setup.tactics,resolution,won,foodSpent,foodPerRound,expeditionPercent:expedition?.percent??82,src,dst,attHeroes,defHeroes,battleLog,originalAtk,originalDef,survivorsA,survivorsD,oldOwner,brutality,aRec,dRec,lootGold,lootFood,originName:a.name,targetName:b.name,attackerOwner:a.owner,originDelta:{troops:a.troops-originBefore.troops,pool:a.pool-originBefore.pool},targetDelta:{troops:b.troops-targetBefore.troops,pool:b.pool-targetBefore.pool},turn};battleInbox.unshift({id:++battleSerial,data:lastBattle,unread:ai&&oldOwner===1});if(battleInbox.length>100)battleInbox.length=100;return won}
+}else{b.cohorts=defArmy.filter(x=>x.n>0);syncTroops(b);addTroops(a,aRec.troops,trainingLevel(a));a.pool+=aRec.pool;addTroops(b,dRec.troops,trainingLevel(b));b.pool+=dRec.pool;lootGold=repelled?0:warGold;lootFood=repelled?0:warFood;if(repelled){a.gold+=warGold;a.food+=warFood}else{b.gold+=warGold;b.food+=warFood}for(const k of ['commerce','harvest','manpower','safety','training'])if(b[k]!=null)b[k]=Math.round(b[k]*(1-brutality));for(const n of repelled?[]:attHeroes){if(!officers(a).includes(n))continue;if(Math.random()<captureChance(n)){a.officers=a.officers.filter(x=>x!==n);captives[n]=b.owner;log('⛓ '+n+' captured after failed attack!')}}a.officer=a.officers[0]||'None';if(!a.officers.includes(a.governor))a.governor=a.officers[0]||null;log((repelled?'↩ Attack repelled / stalemate; survivors returned to ':'🛡 Attacker routed; '+b.name+' defended against ')+a.name+' ('+battleLog.length+' rounds).')}
+const losingHeroes=won?defHeroes:attHeroes;const winningHeroes=won?attHeroes:defHeroes;const itemsAcquired=repelled?[]:TREASURE.dropAndLoot(st,losingHeroes,won?a.owner:b.owner,winningHeroes);
+lastBattle={itemsAcquired,attackerOutcome,capturedHeroes:Object.keys(captives).filter(n=>losingHeroes.includes(n)),repelled,setup,tactics:setup.tactics,resolution,won,foodSpent,foodPerRound,expeditionPercent:expedition?.percent??82,src,dst,attHeroes,defHeroes,battleLog,originalAtk,originalDef,survivorsA,survivorsD,oldOwner,brutality,aRec,dRec,lootGold,lootFood,originName:a.name,targetName:b.name,attackerOwner:a.owner,originDelta:{troops:a.troops-originBefore.troops,pool:a.pool-originBefore.pool},targetDelta:{troops:b.troops-targetBefore.troops,pool:b.pool-targetBefore.pool},turn};battleInbox.unshift({id:++battleSerial,data:lastBattle,unread:ai&&oldOwner===1});if(battleInbox.length>100)battleInbox.length=100;return won}
 function initialSide(arr,heroes,defending,safety,enemyN){let st=armyStats(arr,heroes,defending,safety),rawHP=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].hp,0),rawATK=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].atk,0),rawDEF=arr.reduce((v,c)=>v+c.n*UNIT[c.lv].def,0),fx=heroEffects(heroes,1,defending?'defender':'attacker',st.n,enemyN);
  let passives=[];for(const n of heroes){for(const sk of PASSIVE_SKILLS[n]||[]){let active=!['momentum','sustain'].includes(sk.type)&&(!['outnumbered','precision'].includes(sk.type)||st.n<enemyN)&&(sk.type!=='counter'||defending);if(active)passives.push({hero:n,tier:tier(n),name:sk.name,desc:sk.desc});}}
  return {n:st.n,rawHP,rawATK,rawDEF,hp:rawHP,atk:st.atk*fx.dmg,def:st.def*fx.guard,effectiveDEF:st.def*fx.guard,baseDEF:rawDEF/Math.max(1,st.n),warPct:st.totals[1]/300*100,ldrPct:st.totals[0]/300*100,fortPct:defending?safety/100:0,critPct:st.crit*100,healPct:st.heal*100,passiveAtkPct:(fx.dmg-1)*100,passiveGuardPct:(1-fx.guard)*100,passives};}
