@@ -1,0 +1,6 @@
+
+/* Fullscreen map toolbar: make Inventory visible and avoid overlap. */
+#inventoryButton{position:fixed!important;right:330px!important;bottom:8px!important;z-index:21!important;font-size:11px!important;padding:7px 10px!important;background:#755723!important;border:1px solid #d4b36b!important;color:#fff3cf!important;box-shadow:0 2px 10px #0008!important}
+#encyclopedia{right:435px!important}
+#restart{right:570px!important}
+@media(max-width:680px){#inventoryButton{right:8px!important;bottom:125px!important}#encyclopedia{right:8px!important;bottom:88px!important}#restart{right:8px!important;bottom:165px!important}}

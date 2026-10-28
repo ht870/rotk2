@@ -1,0 +1,10 @@
+
+.treasure-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;width:100%;text-align:left}
+.treasure-info-card{border:1px solid var(--reward-border,#c7a25a);border-radius:9px;background:#142b27;padding:12px;min-width:0}
+.treasure-info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #42544d;font-size:14px;line-height:1.45}
+.treasure-info-row:last-child{border-bottom:0}
+.treasure-info-row>span{color:#aabbb4;flex:0 0 38%}
+.treasure-info-row>b{color:#e9ede9;text-align:right;overflow-wrap:anywhere}
+.battleline:has(.treasure-info-grid){display:block}
+.battleline:has(.treasure-info-grid)>span{display:block;margin-bottom:10px}
+.battleline:has(.treasure-info-grid)>b{display:block;font-weight:normal}

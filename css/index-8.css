@@ -1,0 +1,7 @@
+
+#newTurnToast{position:fixed;z-index:10010;top:19%;left:50%;transform:translate(-50%,-10px) scale(.97);opacity:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:225px;padding:19px 34px;background:linear-gradient(145deg,#20382e,#101f1d);border:1px solid #c4a362;border-radius:12px;box-shadow:0 15px 55px #000b;color:#f6dda0;transition:opacity .18s ease,transform .18s ease}
+#newTurnToast.visible{opacity:1;transform:translate(-50%,0) scale(1)}
+#newTurnToast .newturn-mark{font-size:23px}
+#newTurnToast .newturn-title{font:700 27px Georgia,serif;letter-spacing:.06em}
+#newTurnToast .newturn-subtitle{font:12px system-ui,sans-serif;color:#b6c7bb}
+#end:disabled{opacity:.65;cursor:not-allowed}

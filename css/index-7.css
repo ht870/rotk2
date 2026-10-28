@@ -1,0 +1,9 @@
+
+#mapViewport{position:relative}
+.faction-banners{position:absolute;bottom:12px;left:12px;display:flex;gap:5px;z-index:5;pointer-events:none}
+.faction-banner{display:flex;align-items:center;gap:5px;min-width:58px;padding:3px 7px 3px 4px;border:1px solid #d8b86a;border-radius:6px;color:#fff5db;font:700 11px Georgia,serif;box-shadow:0 3px 10px #0008}
+.faction-banner.wei{background:linear-gradient(120deg,#173c7b,#091a38)}
+.faction-banner.shu{background:linear-gradient(120deg,#12542c,#092c1c)}
+.faction-banner.wu{background:linear-gradient(120deg,#79211f,#381111)}
+.faction-emblem{display:flex;align-items:center;justify-content:center;width:17px;height:22px;clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%);border:1px solid #e9c36e;background:#0003;color:#ffe9aa;font:700 13px serif}
+@media(max-width:600px){.faction-banner{min-width:0;padding:3px 6px;font-size:12px;gap:4px}.faction-emblem{width:15px;height:19px;font-size:12px}.faction-banners{gap:3px;bottom:6px;left:6px}}

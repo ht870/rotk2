@@ -11,7 +11,7 @@ const state={cities,turn:1,over:false,logs:[],wandering:{},discovered:{},searchC
 const r={started:true,state,controllers:{wei:'human',shu:'ai',wu:'human'},ready:{wei:false,shu:false,wu:false},log:[],phase:1,mode:300,version:0};
 const before=state.cities.reduce((n,c)=>n+c.troops,0);
 autoAI(r);
-assert.equal(r.ready.shu,true);assert(r.log.some(x=>x.txt==='AI v4 two-ply planning complete'));
+assert.equal(r.ready.shu,true);assert(r.log.some(x=>x.txt==='AI v4 Grandmaster strategic planning complete'));
 assert(state.cities.every(c=>Number.isFinite(c.gold)&&c.gold>=0&&Number.isFinite(c.troops)&&c.troops>=0));
 assert(state.cities.reduce((n,c)=>n+c.troops,0)<=before+100000);
 console.log('PASS: AI turn completes using real server actions, with valid nonnegative state. Actions:',r.log.length);

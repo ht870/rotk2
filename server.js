@@ -11,6 +11,8 @@ function lobbyRoomList(){return [...rooms].filter(([,r])=>!r.stopped).map(([code
 const {runBattle}=require('./battle_engine');
 const TREASURE=require('./treasure_engine');
 const ROTK_ECONOMY=require('./economy_engine');
+const TURN_CLOCK=require('./turn_clock');
+const GRANDMASTER=require('./grandmaster_ai');
 function reply(res,status,obj){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 function read(req){return new Promise((ok,no)=>{let s='';req.on('data',d=>{s+=d;if(s.length>3000000){req.destroy();no(Error('Too large'))}});req.on('end',()=>{try{ok(JSON.parse(s||'{}'))}catch(e){no(e)}})})}
 function room(code){return rooms.get(code)}
@@ -56,11 +58,7 @@ function startNextTurn(r){
  if(trades)(st.logs||(st.logs=[])).unshift('Auto Trade: '+trades+' idle cities earned '+totalTrade+' Gold.');
  (st.logs||(st.logs=[])).unshift('T'+st.turn+' · Server advanced turn with officer development multipliers.');
  r.phase++;r.ready=Object.fromEntries(SIDES.map(side=>[side,r.controllers[side]==='surrendered']));r.pendingTurn=false;
- if(r.accumulated){
-  const now=Date.now();r.sideDeadline={};r.displayDeadline={};
-  for(const side of SIDES){r.bank[side]=Math.max(0,(r.bank[side]??0))+r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}
-  r.deadline=Math.max(now,...Object.values(r.sideDeadline));
- }else {r.deadline=Date.now()+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}
+ TURN_CLOCK.next(r);
  r.version++;
  r.log.push({phase:r.phase,side:'system',txt:'Turn '+st.turn+' started (server)'});
 }
@@ -91,15 +89,16 @@ function autoAI(r){
    const foodNeed=(c,pct)=>Math.ceil(Math.floor(c.troops*pct/100)*.03)*8;
    const run=act=>{try{const message=applyAction(r,side,owner,act);r.log.push({phase:r.phase,side,txt:'AI '+message});return true}catch(e){r.log.push({phase:r.phase,side,txt:'AI skipped '+act.type+': '+e.message});return false}};
    const treasuryGold=()=>treasury(st,owner);
+   const strategic=GRANDMASTER.frontierPlan(st.cities,owner,adjacent,strength);
    // Set defensive posture for free, based on exposed troop ratios; do not reveal enemy stances.
    for(const c of own().filter(frontline)){
-    const risk=exposure(c),stance=risk>1.2?'fortify':risk<.55&&c.morale<65?'counter':'hold';
+    const risk=Math.max(exposure(c),strategic.threat.get(c.id)||0),stance=risk>1.2?'fortify':risk<.55&&c.morale<65?'counter':'hold';
     if((st.defenseTactics?.[c.id]||'fortify')!==stance)run({type:'defense-tactic',city:c.id,tactic:stance});
    }
    // Reposition officers before planning battles; preserve AP for frontline attackers.
    for(const c of own().filter(c=>!frontline(c)&&available(c).length>1)){
     const targets=adjacentCities(c).filter(t=>t.owner===owner&&frontline(t));
-    targets.sort((a,b)=>exposure(b)-exposure(a));
+    targets.sort((a,b)=>(strategic.threat.get(b.id)||0)-(strategic.threat.get(a.id)||0));
     const t=targets[0];if(!t)continue;
     const heroes=available(c).filter(n=>['S','S+','A'].includes(tier(n))&&(st.moveCD?.[n]||0)===0).sort((a,b)=>heroValue(b)-heroValue(a)).slice(0,Math.max(0,3-(t.officers||[]).length));
     if(heroes.length)run({type:'station',city:c.id,to:t.id,heroes});
@@ -108,9 +107,8 @@ function autoAI(r){
    const donors=own().filter(c=>!c.used&&c.troops>3500).sort((a,b)=>b.troops-a.troops);
    for(const c of donors){
     const targets=adjacentCities(c).filter(t=>t.owner===owner&&frontline(t));
-    targets.sort((a,b)=>(exposure(b)*2+incoming(b)/15000)-(exposure(a)*2+incoming(a)/15000));
-    const t=targets[0];if(!t)continue;
-    const reserve=frontline(c)?Math.max(2800,incoming(c)*.8):1800;
+    const t=GRANDMASTER.chooseReinforcement(c,targets,strategic,strength);if(!t)continue;
+    const reserve=Math.max(strategic.reserve.get(c.id)||1800,frontline(c)?2800:1800);
     if(c.troops*.5<reserve||c.troops< t.troops*.65)continue;
     run({type:'move',city:c.id,to:t.id});
    }
@@ -154,12 +152,12 @@ function autoAI(r){
       const originThreat=enemies(c).filter(x=>x.id!==t.id).reduce((v,x)=>v+strength(x),0);
       for(const pct of [65,80,90]){
        const sent=Math.floor(c.troops*pct/100),food=foodNeed(c,pct);
-       if(sent<1500||c.food<food||c.troops-sent<Math.min(1500,originThreat*.22))continue;
+       if(sent<1500||c.food<food||c.troops-sent<Math.max(1200,Math.min(strategic.reserve.get(c.id)||1200,originThreat*.65)))continue;
        const attack=sent*heroFactor*(.52+Math.min(100,c.morale)*.0075);
        const defense=strength(t);
        const ratio=attack/Math.max(1,defense);
        if(ratio<1.18)continue;
-       const value=cityWorth(t)+campaignPriority(t);
+       const value=cityWorth(t)+campaignPriority(t)+(strategic.priority.get(t.id)||0)*.65;
        const safety=Math.min(2.2,ratio-1.0);
        const risk=twoPlyRisk(c,t,sent);
        const attrition=Math.min(2.5,1/Math.max(.3,ratio));
@@ -202,20 +200,12 @@ function autoAI(r){
     }
    }
    stopFactionClock(r,side);
-   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 two-ply planning complete'});
+   r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'AI v4 Grandmaster strategic planning complete'});
   }
  }finally{r.aiBusy=false}
  if(SIDES.every(side=>r.ready[side]))startNextTurn(r);
 }
-function stopFactionClock(r,side,now=Date.now()){
- if(r.ready[side])return;
- if(r.accumulated){
-  const deadline=r.sideDeadline?.[side];
-  // Never grant a full-turn carry when a faction has no running deadline.
-  r.bank[side]=Number.isFinite(deadline)?Math.max(0,(deadline-now)/1000):0;
-  if(r.sideDeadline)delete r.sideDeadline[side];
- }
-}
+function stopFactionClock(r,side,now=Date.now()){TURN_CLOCK.stop(r,side,now)}
 function finishSide(r,side){
  stopFactionClock(r,side);
  r.ready[side]=true;
@@ -227,13 +217,7 @@ function finishSide(r,side){
 function advance(r){
  if(r.stopped||!r.state||!r.started)return;
  const now=Date.now();
- if(r.accumulated){
-  for(const [side,deadline] of Object.entries(r.sideDeadline||{})){
-   if(!r.ready[side]&&now>=deadline){r.bank[side]=0;r.ready[side]=true;delete r.sideDeadline[side];r.log.push({phase:r.phase,side,txt:'Time expired — forced End Turn'})}
-  }
- }else if(r.deadline&&now>=r.deadline){
-  for(const side of SIDES)if(!r.ready[side]){r.ready[side]=true;r.log.push({phase:r.phase,side,txt:'Time expired — forced End Turn'})}
- }
+ for(const side of TURN_CLOCK.expire(r,now))r.log.push({phase:r.phase,side,txt:'Time expired — forced End Turn'});
  if(SIDES.every(side=>r.ready[side])){startNextTurn(r);return}
  // AI uses the same deadline and bank as humans, but executes its moves automatically.
  if(SIDES.some(side=>r.controllers[side]==='ai'&&!r.ready[side]))autoAI(r);
@@ -403,6 +387,11 @@ http.createServer(async(req,res)=>{try{
  }
  if(req.method==='GET'&&u.pathname==='/assets/Music_04_Siege_at_Red_Cliffs.mp3'){res.writeHead(200,{'Content-Type':'audio/mpeg','Cache-Control':'public, max-age=86400'});return fs.createReadStream(path.join(__dirname,'Music_04_Siege_at_Red_Cliffs.mp3')).pipe(res)}
  if(req.method==='GET'&&(u.pathname==='/'||u.pathname==='/lobby')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(lobbyHtml)}
+ if(req.method==='GET'&&/^\/css\/(?:index-(?:[1-9]|1[0-4])|lobby-[12])\.css$/.test(u.pathname)){
+  const file=path.join(__dirname,'css',path.basename(u.pathname));
+  res.writeHead(200,{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store'});
+  return fs.createReadStream(file).pipe(res);
+ }
  if(req.method==='GET'&&u.pathname==='/treasure_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'treasure_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/economy_engine.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-store'});return fs.createReadStream(path.join(__dirname,'economy_engine.js')).pipe(res)}
  if(req.method==='GET'&&u.pathname==='/classic'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html)}
@@ -564,7 +553,7 @@ http.createServer(async(req,res)=>{try{
  if(!b.state||!Array.isArray(b.state.cities)||b.state.cities.length!==15)throw Error('Invalid snapshot');
  if(r.pendingTurn)throw Error('Turn boundary: reload first');
  if(r.ready[b.side])throw Error('Side already ended turn');
- r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;const now=Date.now();if(r.accumulated){r.sideDeadline={};r.displayDeadline={};for(const side of SIDES){r.bank[side]=r.mode;if(!r.ready[side])r.sideDeadline[side]=now+r.bank[side]*1000;r.displayDeadline[side]=now+r.bank[side]*1000}r.deadline=Math.max(now,...Object.values(r.sideDeadline));}else {r.deadline=now+r.mode*1000;r.displayDeadline=Object.fromEntries(SIDES.map(side=>[side,r.deadline]));}}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
+ r.state=b.state;TREASURE.ensure(r.state);syncVictory(r.state);r.state.harvestCooldown??={};r.state.heroAP??={};r.state.stationCooldown??={};r.state.defenseTactics??={};r.state.spyEffects??={};if(!r.initialized){r.initialized=true;TURN_CLOCK.initialize(r);}r.version++;autoAI(r);syncVictory(r.state);r.log.push({phase:r.phase,side:b.side,txt:b.note||'Classic state updated'});return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/end'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');requirePlayer(r,b.side,b.token);advance(r);if(!SIDES.includes(b.side))throw Error('Bad side');if(!r.state)throw Error('Room not initialized');if(!r.ready[b.side]){r.log.push({phase:r.phase,side:b.side,txt:'End Turn'});finishSide(r,b.side);}return reply(res,200,{ok:true,...view(r)})}
  if(req.method==='POST'&&u.pathname==='/api/turn-applied'){let r=room(code),b=await read(req);if(!r||r.stopped)throw Error('Room stopped or missing');return reply(res,410,{error:'Deprecated: turn transitions are server-authoritative',...view(r)})}
  return reply(res,404,{error:'Not found'});

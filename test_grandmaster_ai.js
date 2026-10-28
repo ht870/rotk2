@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {frontierPlan,graphDistance,chooseReinforcement}=require('./grandmaster_ai');
+const links={0:[1,2],1:[0,3],2:[0,3],3:[1,2]};const neighbors=id=>links[id]||[];
+const cities=[{id:0,owner:0,troops:10000},{id:1,owner:0,troops:2000},{id:2,owner:1,troops:9000,commerce:1000},{id:3,owner:1,troops:5000}];
+const snapshot=JSON.stringify(cities);const strength=c=>c.troops;
+const plan=frontierPlan(cities,0,neighbors,strength);
+assert(plan.threat.get(0)>0);assert(plan.threat.get(1)>0);assert(plan.reserve.get(0)>=1800);
+assert(plan.priority.has(2));assert.equal(JSON.stringify(cities),snapshot,'planner must be pure');
+assert.equal(graphDistance(0,3,neighbors,()=>true),2);
+assert.equal(graphDistance(0,3,neighbors,id=>id!==1&&id!==2),Infinity);
+assert.equal(chooseReinforcement(cities[0],[cities[1]],plan,strength).id,1);
+console.log('PASS: Grandmaster public-board evaluation, defensive reserves, pathing, purity');

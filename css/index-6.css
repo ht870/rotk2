@@ -1,0 +1,7 @@
+
+.citydash .drow>div:nth-child(4){font-size:12px;line-height:1.4}
+.citydash .dev-turn{font-size:9px!important;font-weight:400!important;opacity:.78;line-height:1.3!important}
+.inventory-give-row{display:grid;grid-template-columns:minmax(0,1fr) 94px;align-items:center;gap:12px;margin-top:12px;margin-bottom:5px}
+.inventory-give-row select{min-width:0;width:100%;box-sizing:border-box;padding:10px 12px}
+.inventory-give-row button{min-width:0;width:100%;padding:10px 12px;background:#86632c;color:#fff1ca;border:1px solid #d1aa65;border-radius:8px}
+@media(max-width:420px){.inventory-give-row{grid-template-columns:minmax(0,1fr) 78px;gap:8px}}

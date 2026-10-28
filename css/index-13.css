@@ -1,0 +1,7 @@
+
+#end.endturn-locked{opacity:.55;filter:grayscale(.7);cursor:pointer!important;pointer-events:auto!important}
+.rotk-force-overlay{position:fixed;inset:0;z-index:20000;background:#000a;display:grid;place-items:center;padding:16px}
+.rotk-force-dialog{width:min(420px,96vw);background:#162a27;border:2px solid #bc9a54;border-radius:12px;padding:22px;color:#f4e4bd;box-shadow:0 12px 50px #0009;font:15px system-ui}
+.rotk-force-dialog h3{margin:0 0 12px;color:#f5d48e;font:700 23px Georgia,serif}
+.rotk-force-dialog p{margin:0 0 20px}.rotk-force-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.rotk-force-actions button{background:#31483f;border:1px solid #b99b60;color:#fff1d2;border-radius:7px;padding:10px 13px;cursor:pointer}

@@ -1,0 +1,10 @@
+
+/* Give the Create Room form a real width for readable duration labels. */
+@media(min-width:851px){
+ .community.workspace{grid-template-columns:minmax(220px,1fr) minmax(385px,1.45fr) minmax(330px,1.25fr)!important}
+ .community.workspace:not(.has-room){grid-template-columns:minmax(250px,1fr) minmax(410px,1.45fr)!important}
+}
+.createroom{grid-template-columns:minmax(100px,1fr) minmax(160px,1.35fr) auto!important;gap:8px!important}
+.createroom select{width:100%;min-width:160px}
+.createroom button{min-width:70px}
+@media(max-width:480px){.createroom{grid-template-columns:minmax(0,1fr) minmax(135px,1.2fr)!important}.createroom button{grid-column:1/-1}.createroom select{min-width:0}}

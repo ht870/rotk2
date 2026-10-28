@@ -24,3 +24,15 @@ Older detailed release notes are intentionally excluded from the deployment pack
 - Duel loser withdraws from this battle, immediately losing combat effects. Losing side morale −10.
 - Strategy adjustments: HOLD DEF +18%; AMBUSH enemy morale −7; other effects unchanged.
 - TAUNT/DUEL implemented in both multiplayer server engine and standalone classic client.
+
+## v4.0.0-phase1
+- Extracted faction timer calculations into turn_clock.js without changing intended timing semantics.
+- Added deterministic timer regression tests.
+- Existing AI, treasure and duel smoke tests pass.
+- End Turn Turn-49 root cause not yet proven; long-match tests pending.
+
+## v4.0.2-grandmaster
+- Added pure public-board strategic planner (`grandmaster_ai.js`) for threat assessment, defensive reserves, connected-territory target ranking and reinforcement selection.
+- Integrated with existing legal server-side AI action flow; no resource bonuses or hidden opponent state.
+- Added `test_grandmaster_ai.js`; retained previous regression tests.
+- Scope: enhanced heuristics, not full multi-turn Monte Carlo search or trained AI. Benchmark win rate not yet measured.

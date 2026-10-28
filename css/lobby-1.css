@@ -1,0 +1,47 @@
+
+:root{color-scheme:dark}*{box-sizing:border-box}body{background:radial-gradient(ellipse at top,#263d52,#09131f 75%);color:#eee2c9;font:15px system-ui;margin:0;min-height:100vh;display:grid;place-items:center}main{width:min(1050px,96vw);background:#152638ee;border:1px solid #b69a5e;border-radius:16px;padding:28px;box-shadow:0 24px 70px #0008}h1{font:700 32px Georgia;margin:0 0 8px;color:#f4d28d}.sub{color:#b7c3ce;margin:0 0 20px}input,select,button{font:inherit;padding:10px;border-radius:7px;background:#22394d;color:#fff;border:1px solid #748598}button{cursor:pointer;background:#795b2e;border-color:#bd9d5c}button:hover{filter:brightness(1.15)}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.faction{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1c3043;border:1px solid #42576b;border-radius:10px;padding:14px;margin:10px 0}.faction strong{font:700 23px Georgia}.faction small{display:block;color:#9bb0bd}.controls{display:flex;gap:6px}.controls button{font-size:13px;padding:7px 11px}.wei{color:#80b7fa}.shu{color:#7ddca6}.wu{color:#f79a89}#msg{min-height:24px;color:#f0b28f}#gameLink{overflow-wrap:anywhere}.muted{font-size:12px;color:#9db0bf}#waiting{display:none}.faction-benefits{background:#0e2130;border:1px solid #52667a;border-radius:9px;padding:11px 14px;margin:12px 0;line-height:1.8;font-size:13px}
+
+.community{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(250px,1fr);gap:14px;margin-top:18px}.panel{background:#0d2030;border:1px solid #465e70;border-radius:10px;padding:12px;min-width:0}.panel h2{font:700 19px Georgia;color:#f4d28d;margin:0 0 10px}.chatlog{height:250px;overflow-y:auto;background:#091825;border-radius:7px;padding:10px;overflow-wrap:anywhere}.chatline{margin:0 0 9px;line-height:1.4}.chatline small{color:#91a6b6}.chatline b{color:#f4d28d}.chatline a,.roomitem a{color:#9acfff}.chatinput{display:flex;gap:7px;margin-top:10px}.chatinput input{flex:1;min-width:0}.chatinput button{white-space:nowrap}.roomlist{height:250px;overflow-y:auto}.roomitem{padding:9px 4px;border-bottom:1px solid #304455;display:flex;justify-content:space-between;gap:8px;align-items:center}.roomitem button{padding:5px 9px;font-size:12px}.invitebutton{margin-top:9px;font-size:13px}.chatstatus{font-size:12px;color:#d9b18d;min-height:16px;margin-top:4px}@media(max-width:720px){.community{grid-template-columns:1fr}.chatlog,.roomlist{height:210px}main{padding:16px}}
+
+/* Compact single-screen desktop lobby */
+.buildversion{font-size:11px;font-weight:normal;color:#aab8c8;vertical-align:middle;margin-left:7px}
+body{display:block;min-height:100dvh;font-size:12px;overflow:hidden}
+main{width:100%;max-width:1700px;height:100dvh;min-height:0;margin:auto;padding:12px 14px;border-radius:0;display:flex;flex-direction:column;box-shadow:none}
+.topbar{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:0 2px 9px}
+h1{font-size:21px;margin:0}.topbar .muted{font-size:11px}
+.community.workspace{display:grid;grid-template-columns:minmax(240px,1.05fr) minmax(210px,.85fr) minmax(345px,1.35fr);gap:10px;flex:1;min-height:0;margin:0}
+.panel{display:flex;flex-direction:column;min-height:0;padding:10px;overflow:hidden}
+.panel h2{font-size:15px;margin:0 0 8px}
+.chatlog,.roomlist{height:auto;min-height:0;flex:1;overflow-y:auto}
+.chatlog{padding:8px;font-size:12px}.chatline{margin-bottom:7px;line-height:1.35}
+.roomitem{padding:7px 3px}.roomitem button{font-size:11px;padding:4px 7px}
+input,select,button{font-size:12px;padding:6px 7px;border-radius:5px}
+.chatinput{margin-top:7px}.invitebutton{font-size:11px;margin-top:7px;align-self:flex-start}
+.chatstatus{font-size:11px}
+.roomsettings{display:grid;grid-template-columns:1fr 1fr 65px;gap:6px}
+.roomsettings label{font-size:10px;color:#b7c3ce;display:flex;flex-direction:column;gap:3px}
+.roomsettings input,.roomsettings select{width:100%;min-width:0}
+.roomactions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+#msg{min-height:18px;font-size:11px;margin:1px 0;color:#f0b28f}
+.faction-benefits{display:flex;flex-wrap:wrap;gap:5px 10px;padding:7px;margin:5px 0;font-size:10px;line-height:1.25}
+.faction{padding:8px;margin:5px 0;border-radius:7px;gap:5px}
+.faction strong{font-size:17px}.faction small{font-size:10px}
+.controls{gap:4px}.controls button{font-size:11px;padding:5px 7px}
+.bottomactions{margin:8px 0 2px}.roomhint{font-size:10px;margin:5px 0}
+@media(max-width:850px){body{overflow:auto}main{height:auto;min-height:100dvh}.community.workspace{grid-template-columns:1fr;min-height:auto}.panel{min-height:260px}.chatlog,.roomlist{min-height:180px;max-height:300px}.detailpanel{min-height:0}}
+@media(max-height:620px) and (min-width:851px){main{padding:7px 10px}.topbar{padding-bottom:5px}.panel{padding:7px}.faction{padding:5px;margin:3px 0}.faction-benefits{padding:5px;margin:3px 0}.panel h2{margin-bottom:5px}}
+
+.buildversion{font:normal 11px system-ui;color:#aab8c8;margin-left:7px}
+.playerlabel{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#b7c3ce;margin-bottom:10px}
+.playerlabel input{width:100%}
+.createroom{display:grid;grid-template-columns:minmax(0,1fr) 64px auto;align-items:end;gap:5px}
+.createroom label{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:10px;color:#b7c3ce}
+.createroom input,.createroom select{width:100%;min-width:0}
+.createroom button{white-space:nowrap}
+#createhint{margin:6px 0 14px;font-size:10px}
+.listheading{margin-top:4px!important}
+#roomdetail[hidden]{display:none!important}
+#roomtitle{color:#a8d7fa}
+.roompanel .roomlist{min-height:0}
+.roomitem.active{background:#1b3d52;border-radius:5px}
+@media(min-width:851px){.community.workspace{grid-template-columns:minmax(240px,1.05fr) minmax(245px,.9fr) minmax(340px,1.35fr)}.community.workspace:not(.has-room){grid-template-columns:minmax(300px,1fr) minmax(300px,1fr)} }
